@@ -105,12 +105,13 @@ class ResNet(nn.Module):
         # 8 x 16
         layer4_out = self.layer4(layer3_out)
 #         print("layer4", x.shape)
+        x = layer4_out
         # 4 x 8
-        x = x.view(x.shape[0],-1).mean(1)
+        x = x.view(x.shape[0],x.shape[1],-1).mean(2)
         # 1 x 1
 #         x = x.view(x.size(0), -1)
 #         x = self.fc(x)
         layer_outputs = {"conv1_out": conv1_out, "layer1_out": layer1_out,
                          "layer2_out": layer2_out, "layer3_out": layer3_out,
                          "layer4_out": layer4_out}
-        return x[:,None], layer_outputs
+        return x, layer_outputs

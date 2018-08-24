@@ -1,7 +1,14 @@
 from __future__ import print_function, division
 import torch as T
 import torch.nn as nn
+import torch.nn.functional as F
 from volume import Vol2D
+from resnet import ResNet, BasicBlock
+from super_res import SuperResBlock
+from torch.utils.data import DataLoader, Dataset
+from tqdm import tqdm
+
+
 
 class Deep_KSVD(Vol2D):
     def __init__(self, nZ=11, H=232, W=512, nEmbedding=20, prev_frames=1,
@@ -53,8 +60,8 @@ class Deep_KSVD(Vol2D):
 
     def sample_embedding(self, mu, logvar):
         if self.training:
-            std = torch.exp(0.5*logvar)
-            eps = torch.randn_like(std)
+            std = T.exp(0.5*logvar)
+            eps = T.randn_like(std)
             return eps.mul(std).add_(mu)
         else:
             return mu
@@ -92,7 +99,7 @@ class Deep_KSVD(Vol2D):
         pred = self.decode(encoded)
         return pred, encoded
 
-def train(model,train_data,valid_data, nepochs=10, lr=1e-3, sparse_lambda=1, tail_lambda=1e2, half=False, cuda=True):
+def train(model,train_data,valid_data, nepochs=10, lr=1e-3, sparse_lambda=1, tail_lambda=1e2, half=False, cuda=True, batch_size=16, num_workers=8):
     global e
     global avg_Y_loss
     global avg_Y_val_loss
@@ -173,3 +180,4 @@ def train(model,train_data,valid_data, nepochs=10, lr=1e-3, sparse_lambda=1, tai
         avg_Y_valid_loss = cum_Y_loss/len(valid_data)
         print("VALIDATION: avg_loss: {:3E}, Y_loss: {:3E}, tail_loss: {:3E}".format(
             cum_loss/len(valid_data), avg_Y_valid_loss, cum_tail_loss/len(valid_data)))
+        return avg_Y_loss, avg_Y_valid_loss

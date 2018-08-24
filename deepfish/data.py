@@ -5,9 +5,8 @@ from torch.utils.data import DataLoader, Dataset
 
 class ZebraFishData(Dataset):
     "B x nFrames x Z x H x W"
-    def __init__(self, imaging_vol, shocks, tail_movements,
+    def __init__(self, imaging, shocks, tail_movements,
                  index_map=None, prev_frames=2, next_frames=1):
-        imaging = np.pad(imaging_vol,((0,0),(0,0),(6,6),(0,0)), 'constant', constant_values=(0,0))
         data = imaging - imaging.mean(0)
         # use channel for future / prev frames
         self.data = T.from_numpy(data)
