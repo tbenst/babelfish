@@ -1,3 +1,6 @@
+from __future__ import print_function, division
+import numpy as np
+
 def get_padding(padding_type, kernel_size):
     assert padding_type in ['SAME', 'VALID']
     if padding_type == 'SAME':

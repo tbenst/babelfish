@@ -14,7 +14,7 @@ import matplotlib.gridspec as gridspec
 import scipy.sparse as sparse
 from scipy import stats
 import gc
-from tqdm import tqdm_notebook as tqdm
+from tqdm import tqdm
 import pandas as pd
 import seaborn as sb
 from pandas import DataFrame
@@ -70,7 +70,7 @@ def gen_imaging(nT, nZ, H, W, half=False):
     return np.random.randint(0,3000,[nT,nZ,H,W]).astype(dtype)
 
 
-def resize_volume(images, fx, fy, interpolation=cv2.INTER_CUBIC):
+def resize_volume(images, fx, fy, interpolation=cv2.INTER_LINEAR):
     im = cv2.resize(images[0], None, fx=fx, fy=fy, interpolation=interpolation)
     new = np.zeros([images.shape[0],im.shape[0],im.shape[1]]).astype(np.float32)
     new[0] = im
@@ -78,13 +78,40 @@ def resize_volume(images, fx, fy, interpolation=cv2.INTER_CUBIC):
         new[i] = cv2.resize(img, None, fx=fx, fy=fy, interpolation=interpolation)
     return new
 
-def resize_batch(images, fx, fy, interpolation=cv2.INTER_CUBIC):
+def resize_batch(images, fx, fy, interpolation=cv2.INTER_LINEAR):
     im = cv2.resize(images[0,0], None, fx=fx, fy=fy, interpolation=interpolation)
     new = np.zeros([images.shape[0],images.shape[1], im.shape[0],im.shape[1]]).astype(np.float32)
     for b, vol in enumerate(images):
         for z, img in enumerate(vol):
             new[b,z] = cv2.resize(img, None, fx=fx, fy=fy, interpolation=interpolation)
     return new
+
+def pad_imaging(imaging, H, W):
+    try:
+        assert imaging.shape[2] <= H and imaging.shape[3] <= W
+    except Exception as e:
+        print("H ({}) and W ({}) must be less than {} and {}".format(H, W, imaging.shape[1], imaging.shape[2]))
+        raise e
+    new_imaging = np.zeros([imaging.shape[0],imaging.shape[1],H,W])
+    if imaging.shape[2]==H:
+        pad_top = False
+    else:
+        pad_top = int(np.ceil((H-imaging.shape[2])/2))
+        pad_bottom = int(np.floor((H-imaging.shape[2])/2))
+    if imaging.shape[3]==W:
+        pad_left = False
+    else:
+        pad_left = int(np.ceil((W-imaging.shape[3])/2))
+        pad_right = int(np.floor((W-imaging.shape[3])/2))
+    if not pad_left and not pad_top:
+        return imaging
+    elif pad_left and not pad_top:
+        new_imaging[:,:,:,pad_left:(-pad_right)] = imaging
+    elif pad_top and not pad_left:
+        new_imaging[:,:,pad_top:(-pad_bottom),:] = imaging
+    else:
+        new_imaging[:,:,pad_top:(-pad_bottom),pad_left:(-pad_right)] = imaging
+    return new_imaging.astype(np.float32)
 
 def read_cnmf(base_filename, nZ=11):
     planes = []

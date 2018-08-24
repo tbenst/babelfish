@@ -25,7 +25,7 @@ def BN_convert_float(module):
     fn to all modules, parameters, and buffers. Thus we wouldn't
     be able to guard the float conversion based on the module type.
     '''
-    if isinstance(module, torch.nn.modules.batchnorm._BatchNorm):
+    if isinstance(module, T.nn.modules.batchnorm._BatchNorm):
         module.float()
     for child in module.children():
         BN_convert_float(child)
