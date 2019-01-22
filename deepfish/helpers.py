@@ -28,14 +28,14 @@ import resource
 
 import os, sys, datetime
 import itertools
-LF_CODE_PATH = os.path.expanduser('~/projects/LFAnalyze/code')
-FT_CODE_PATH = os.path.expanduser('~/projects/fishTrax/code/analysis/')
-FD_CODE_PATH = os.path.expanduser('~/projects/fish_despair_notebooks/src/')
-sys.path.insert(0,LF_CODE_PATH)
-sys.path.insert(0,FT_CODE_PATH)
-sys.path.insert(0,FD_CODE_PATH)
+# LF_CODE_PATH = os.path.expanduser('~/projects/LFAnalyze/code')
+# FT_CODE_PATH = os.path.expanduser('~/projects/fishTrax/code/analysis/')
+# FD_CODE_PATH = os.path.expanduser('~/projects/fish_despair_notebooks/src/')
+# sys.path.insert(0,LF_CODE_PATH)
+# sys.path.insert(0,FT_CODE_PATH)
+# sys.path.insert(0,FD_CODE_PATH)
 
-import passivity_2p_imaging_utils as p2putils
+# import passivity_2p_imaging_utils as p2putils
 
 
 def get_frames_from_z(z, fish,half=False):
@@ -90,28 +90,119 @@ def pad_imaging(imaging, H, W):
     try:
         assert imaging.shape[2] <= H and imaging.shape[3] <= W
     except Exception as e:
-        print("H ({}) and W ({}) must be less than {} and {}".format(H, W, imaging.shape[1], imaging.shape[2]))
+        print("H ({}) and W ({}) must be greater than {} and {}".format(H, W, imaging.shape[2], imaging.shape[3]))
         raise e
     new_imaging = np.zeros([imaging.shape[0],imaging.shape[1],H,W])
     if imaging.shape[2]==H:
         pad_top = False
     else:
-        pad_top = int(np.ceil((H-imaging.shape[2])/2))
-        pad_bottom = int(np.floor((H-imaging.shape[2])/2))
+        pad_top = int(np.floor((H-imaging.shape[2])/2))
+        pad_bottom = int(np.ceil((H-imaging.shape[2])/2))
     if imaging.shape[3]==W:
         pad_left = False
     else:
-        pad_left = int(np.ceil((W-imaging.shape[3])/2))
-        pad_right = int(np.floor((W-imaging.shape[3])/2))
-    if not pad_left and not pad_top:
+        pad_left = int(np.floor((W-imaging.shape[3])/2))
+        pad_right = int(np.ceil((W-imaging.shape[3])/2))
+        
+    if not pad_right and not pad_bottom:
         return imaging
-    elif pad_left and not pad_top:
+    elif pad_right and not pad_bottom:
         new_imaging[:,:,:,pad_left:(-pad_right)] = imaging
-    elif pad_top and not pad_left:
+    elif pad_bottom and not pad_right:
         new_imaging[:,:,pad_top:(-pad_bottom),:] = imaging
     else:
         new_imaging[:,:,pad_top:(-pad_bottom),pad_left:(-pad_right)] = imaging
     return new_imaging.astype(np.float32)
+
+def pad_image(image, H, W):
+    try:
+        assert image.shape[0] <= H and image.shape[1] <= W
+    except Exception as e:
+        print("H ({}) and W ({}) must be less than {} and {}".format(H, W, image.shape[0], image.shape[1]))
+        raise e
+    new_image = np.zeros([H,W])
+    if image.shape[0]==H:
+        pad_top = False
+    else:
+        pad_top = int(np.ceil((H-image.shape[0])/2))
+        pad_bottom = int(np.floor((H-image.shape[0])/2))
+    if image.shape[0]==W:
+        pad_left = False
+    else:
+        pad_left = int(np.ceil((W-image.shape[1])/2))
+        pad_right = int(np.floor((W-image.shape[1])/2))
+    if not pad_left and not pad_top:
+        return image
+    elif pad_left and not pad_top:
+        new_image[:,pad_left:(-pad_right)] = image
+    elif pad_top and not pad_left:
+        new_image[pad_top:(-pad_bottom),:] = image
+    else:
+        new_image[pad_top:(-pad_bottom),pad_left:(-pad_right)] = image
+    return new_image.astype(np.float32)
+
+def crop_image(image, H, W):
+    try:
+        assert image.shape[0] >= H and image.shape[1] >= W
+    except Exception as e:
+        print("H ({}) and W ({}) must be less than {} and {}".format(H, W, image.shape[0], image.shape[1]))
+        raise e
+    new_image = np.zeros([H,W])
+    if image.shape[0]==H:
+        crop_top = False
+    else:
+        crop_top = int(np.ceil((image.shape[0]-H)/2))
+        crop_bottom = int(np.floor((image.shape[0]-H)/2))
+    if image.shape[0]==W:
+        crop_left = False
+    else:
+        crop_left = int(np.ceil((image.shape[1]-W)/2))
+        crop_right = int(np.floor((image.shape[1]-W)/2))
+    if not crop_left and not crop_top:
+        return image
+    elif crop_left and not crop_top:
+        new_image = image[:,crop_left:(-crop_right)]
+    elif crop_top and not crop_left:
+        new_image = image[crop_top:(-crop_bottom),:]
+    else:
+        new_image = image[crop_top:(-crop_bottom),crop_left:(-crop_right)]
+    return new_image.astype(np.float32)
+
+
+def pad_volume(image, H, W):
+    # this should be ND...
+    try:
+        assert image.shape[1] <= H and image.shape[2] <= W
+    except Exception as e:
+        print("H ({}) and W ({}) must be less than {} and {}".format(H, W, image.shape[1], image.shape[2]))
+        raise e
+    new_image = np.zeros([image.shape[0], H,W])
+    if image.shape[1]==H:
+        pad_top = False
+    else:
+        pad_top = int(np.floor((H-image.shape[1])/2))
+        pad_bottom = int(np.ceil((H-image.shape[1])/2))
+    if image.shape[1]==W:
+        pad_left = False
+    else:
+        pad_left = int(np.floor((W-image.shape[2])/2))
+        pad_right = int(np.ceil((W-image.shape[2])/2))
+    if not pad_right and not pad_bottom:
+        return image
+    elif pad_right and not pad_bottom:
+        new_image[:, :,pad_left:(-pad_right)] = image
+    elif pad_bottom and not pad_right:
+        new_image[:, pad_top:(-pad_bottom),:] = image
+    else:
+        new_image[:, pad_top:(-pad_bottom),pad_left:(-pad_right)] = image
+    return new_image.astype(np.float32)
+
+def norm01(a):
+    return (a-a.min())/a.max()
+
+# def shift_image(a,dW,dH):
+#     new_a = np.zeros(*a.shape)
+    
 
 def read_cnmf(base_filename, nZ=11):
     planes = []

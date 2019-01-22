@@ -23,6 +23,7 @@ class ZebraFishData(Dataset):
             return self.data.shape[0]-self.prev_frames - self.next_frames + 1
 
     def __getitem__(self, i):
+        "X[0]==X_i, X[1]==X_i-1, Y[0]==Y_i+1, Y[1]==Y_i+2"
         if self.index_map:
             idx = self.index_map[i]
         else:
