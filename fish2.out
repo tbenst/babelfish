@@ -1,0 +1,26 @@
+/home/ubuntu/anaconda3/envs/pytorch_p27/lib/python2.7/site-packages/matplotlib/__init__.py:1067: UserWarning: Duplicate key in file "/home/ubuntu/.config/matplotlib/matplotlibrc", line #2
+  (fname, cnt))
+/home/ubuntu/anaconda3/envs/pytorch_p27/lib/python2.7/site-packages/matplotlib/__init__.py:1067: UserWarning: Duplicate key in file "/home/ubuntu/.config/matplotlib/matplotlibrc", line #3
+  (fname, cnt))
+/home/ubuntu/anaconda3/envs/pytorch_p27/lib/python2.7/site-packages/h5py/__init__.py:36: FutureWarning: Conversion of the second argument of issubdtype from `float` to `np.floating` is deprecated. In future, it will be treated as `np.float64 == np.dtype(float).type`.
+  from ._conv import register_converters as _register_converters
+  0%|          | 0/71 [00:00<?, ?it/s]Loading f01547
+imaging shape: (2990, 11, 110, 256)
+['test: 200 (8.14%)', 'train: 2257 (91.86%)', 'validation: 0 (0.00%)']
+total num params: 1308174
+epoch 0: THCudaCheck FAIL file=/opt/conda/conda-bld/pytorch_1524577523076/work/aten/src/THC/generic/THCStorage.cu line=58 error=2 : out of memory
+Exception NameError: "global name 'FileNotFoundError' is not defined" in <bound method _DataLoaderIter.__del__ of <torch.utils.data.dataloader._DataLoaderIter object at 0x7f69b8089a10>> ignored
+Traceback (most recent call last):
+  File "main.py", line 192, in <module>
+    avg_Y_loss, avg_Y_valid_loss = train(conv_model,train_data,test_data,nepochs,lr=1e-3, kl_lambda=1e-3, half=half, cuda=cuda, batch_size=batch_size, num_workers=num_workers)
+  File "/data2/Code/zebrafish_passivity/deepfish/deep_skip.py", line 171, in train
+    (X_pred, X_pred_tail), (Y_pred, Y_pred_tail), mean, logvar = model(X, Y_shock)
+  File "/home/ubuntu/anaconda3/envs/pytorch_p27/lib/python2.7/site-packages/torch/nn/modules/module.py", line 491, in __call__
+    result = self.forward(*input, **kwargs)
+  File "/home/ubuntu/anaconda3/envs/pytorch_p27/lib/python2.7/site-packages/torch/nn/parallel/data_parallel.py", line 114, in forward
+    outputs = self.parallel_apply(replicas, inputs, kwargs)
+  File "/home/ubuntu/anaconda3/envs/pytorch_p27/lib/python2.7/site-packages/torch/nn/parallel/data_parallel.py", line 124, in parallel_apply
+    return parallel_apply(replicas, inputs, kwargs, self.device_ids[:len(replicas)])
+  File "/home/ubuntu/anaconda3/envs/pytorch_p27/lib/python2.7/site-packages/torch/nn/parallel/parallel_apply.py", line 65, in parallel_apply
+    raise output
+RuntimeError: cuda runtime error (2) : out of memory at /opt/conda/conda-bld/pytorch_1524577523076/work/aten/src/THC/generic/THCStorage.cu:58
