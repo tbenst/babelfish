@@ -2,7 +2,10 @@ import torch as T
 import torch.nn as nn
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
+import numpy as np
 from torch.utils.data import DataLoader, Dataset
+import skvideo.io
+
 
 def plot_model_vs_real(model,data):
     plt.figure(figsize=(30,15))
@@ -98,7 +101,7 @@ def MSEbyDist(imaging, maxdist=10, batch_size=256):
     mse = [T.cat(m).numpy() for m in mse]
     return mse
 
-def plot_embedding_over_time(model,data, batch_size=64):
+def plot_embedding_over_time(model,data, batch_size=64, num_workers=12):
     dataloader = DataLoader(data, batch_size=batch_size, shuffle=False, num_workers=num_workers)
     embeddings = []
     logvars = []
@@ -108,53 +111,77 @@ def plot_embedding_over_time(model,data, batch_size=64):
         X, X_shock, X_tail = (X["brain"], X["shock"], X["tail_movement"])
         Y, Y_shock, Y_tail = (Y["brain"], Y["shock"], Y["tail_movement"])
         with T.no_grad():
-            embedding = model.encode(X.cuda())
+            embedding, logvar, _ = model.encode(X.cuda())
         embeddings.append(embedding.cpu().numpy())
+        logvars.append(logvar.cpu().numpy())
     model.train()
     embeddings = np.vstack(embeddings)
+    logvars = np.vstack(logvars)
     nEmbeddings = embeddings.shape[1]
     half = int(np.ceil(nEmbeddings / 2))
 
     plt.figure(figsize=(15,20))
-    plt.subplot(2,1,1)
+    plt.subplot(4,1,1)
     plt.plot(embeddings[:,0:half])
     plt.title("Embeddings over time")
     plt.xlabel("Time")
     plt.legend(np.arange(half))
-    plt.subplot(2,1,2)
+    plt.subplot(4,1,2)
     plt.plot(embeddings[:,half:])
     plt.title("Embeddings over time")
+    plt.xlabel("Time")
+    plt.legend(np.arange(half,nEmbeddings))
+
+    plt.subplot(4,1,3)
+    plt.plot(logvars[:,0:half])
+    plt.title("Logvars over time")
+    plt.xlabel("Time")
+    plt.legend(np.arange(half))
+    plt.subplot(4,1,4)
+    plt.plot(logvars[:,half:])
+    plt.title("Logvars over time")
     plt.xlabel("Time")
     plt.legend(np.arange(half,nEmbeddings))
 
     plt.tight_layout()
     return embeddings
 
-
 def scale_for_vid(arr):
     return ((arr - arr.min()) * (1/(arr.max() - arr.min()) * 255)).astype('uint8')
 
 
 import skvideo.io
-def makePredVideo(model, data, batch_size=32):
+def scale_for_vid(arr, mymin, mymax):
+    return ((arr - mymin) * (1/(mymax - mymin)) * 255).astype('uint8')
+
+def scale_for_vid(arr, mymin, mymax):
+    return ((arr - mymin) * (1/(mymax - mymin)) * 255).astype('uint8')
+
+def makePredVideo(model, data, batch_size=32, num_workers=12, name="test"):
     dataloader = DataLoader(data, batch_size=batch_size, shuffle=False, num_workers=num_workers)
-    writer = skvideo.io.FFmpegWriter(model_name + "_prediction.mp4",outputdict={
+    writer = skvideo.io.FFmpegWriter(name+".mp4",outputdict={
         '-b': '30000000', '-vcodec': 'libx264'})
+    mymax = float(T.cat([test_data[i][0]['brain'] for i in np.arange(len(test_data))]).max())
+    mymin = float(T.cat([test_data[i][0]['brain'] for i in np.arange(len(test_data))]).min())
     for batch_data in dataloader:
         X, Y = batch_data
         X, X_shock, X_tail = (X["brain"], X["shock"], X["tail_movement"])
         Y, Y_shock, Y_tail = (Y["brain"], Y["shock"], Y["tail_movement"])
         with T.no_grad():
-            (Y_pred, Y_pred_tail), _ = model(X.cuda(),Y_shock.cuda())
-        for y, y_pred in zip(Y,Y_pred):
+            (X_pred, X_pred_tail), (Y_pred, Y_pred_tail), _, _= model(X.cuda(),Y_shock.cuda())
+        for x, x_pred, y, y_pred in zip(X,X_pred,Y,Y_pred):
             # 7th z layer
-            zslice = y_pred[6]
+            zslice = x_pred[6]
             H = zslice.shape[0]
             W = zslice.shape[1]
-            frame = np.zeros([H*2,W])
+            frame = np.zeros([H*2,W*3])
 
-            frame[:H] = y[-1,6]
-            frame[H:] = y_pred[6]
-            writer.writeFrame(frame)
+            frame[:H, :W] = y[0,6]
+            frame[:H, W:(2*W)] = y[-1,6] - y[0,6]
+            frame[:H, (2*W):] = y[-1,6]
+            frame[H:, :W] = x_pred[6]
+            frame[H:, W:(2*W)] = y_pred[6] - y[0,6].cuda() #x_pred[6]
+            frame[H:, (2*W):] = y_pred[6]
+            writer.writeFrame(scale_for_vid(frame,mymin,mymax))
     writer.close()
     return frame

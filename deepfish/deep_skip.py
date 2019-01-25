@@ -28,15 +28,19 @@ class DeepSkip(Vol2D):
         self.resnet = ResNet(BasicBlock, [2, 2, 2, 2], prev_frames)
         self.resOut = 64
         self.nEmbedding = nEmbedding
+        assert nEmbedding % 2 == 0
 
         # b x 11 x 32 x 11 x 25
         self.encoding_mean = nn.Linear(self.resOut*self.nZ, nEmbedding)
         self.encoding_logvar = nn.Linear(self.resOut*self.nZ, nEmbedding)
+        self.nhalf_embed = int(self.nEmbedding/2)
+        # Prediction
+        self.pred1 = nn.Linear(self.nhalf_embed+next_frames, pred_hidden) # add dim for shock_{t+1}
+        self.pred2 = nn.Linear(pred_hidden, self.nhalf_embed) # last 10 (context) are unused
 
         # Prediction
-        self.pred1 = nn.Linear(nEmbedding+next_frames, pred_hidden) # add dim for shock_{t+1}
-        self.pred_bn1 = nn.BatchNorm1d(pred_hidden)
-        self.pred2 = nn.Linear(pred_hidden, nEmbedding) # last 10 (context) are unused
+        self.predz1 = nn.Linear(self.nhalf_embed+next_frames, pred_hidden) # add dim for shock_{t+1}
+        self.predz2 = nn.Linear(pred_hidden, self.nhalf_embed) # last 10 (context) are unused
 
         # Decoding
         self.activation = nn.Tanh()
@@ -91,6 +95,12 @@ class DeepSkip(Vol2D):
         x = self.pred2(x)
         return x
 
+    def predictZero(self, x, shock):
+        x = T.cat([x, shock],1)
+        x = self.activation(self.predz1(x))
+        x = self.predz2(x)
+        return x
+
     def decode(self, x, layer_output):
         tail = F.sigmoid(self.tail_decoding(x[:,[0]])) # use first embedding only
         # b x 10
@@ -114,9 +124,9 @@ class DeepSkip(Vol2D):
         "Return Previous volume (denoised), next volume (prediction), latent mean and logvar."
         mean, logvar, layer_outputs = self.encode(x)
         encoded = self.sample_embedding(mean, logvar)
-        encoded_pred = self.predict(encoded, shock)
-        zero_embed = T.zeros_like(encoded)
-        prev = self.decode(zero_embed, layer_outputs) # force to use only skip connections for decode
+        encoded_prev = self.predictZero(encoded[:,self.nhalf_embed:], shock)
+        encoded_pred = self.predict(encoded[:,:self.nhalf_embed], shock)
+        prev = self.decode(encoded_prev, layer_outputs) # force to use only skip connections for decode
         pred = self.decode(encoded_pred, layer_outputs)
         return prev, pred, mean, logvar # should we move variational layer? or return encoded_pred?
 
@@ -167,7 +177,7 @@ def train(model,train_data,valid_data, nepochs=10, lr=1e-3, kl_lambda=1, kl_tail
             kld = unit_norm_KL_divergence(mean, logvar)
             mse_X = F.mse_loss(X_pred, Y[:,0])
             mse_Y = F.mse_loss(Y_pred, Y[:,-1])
-            mse_tail = F.mse_loss(X_pred_tail, X_tail[:,[-1]])
+            mse_tail = F.mse_loss(Y_pred_tail, Y_tail[:,[-1]])
             loss = mse_X + mse_Y + kl_lambda*kl_schedule[e] * kld + kl_tail*mse_tail
             if e==0:
                 print("MSE_X: {:.3E}, MSE_Y: {:.3E}, KLD: {:.3E}, Tail: {:.3E}".format(float(mse_X),float(mse_Y),float(kld),float(mse_tail)))

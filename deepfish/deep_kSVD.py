@@ -25,7 +25,7 @@ class Deep_KSVD(Vol2D):
         # batch x channel x Z x H x W
         # Encoding
         self.resnet = ResNet(BasicBlock, [2, 2, 2, 2], prev_frames)
-        self.resOut = 1
+        self.resOut = 64
         self.nEmbedding = nEmbedding
 
         # b x 11 x 32 x 11 x 25
@@ -180,4 +180,4 @@ def train(model,train_data,valid_data, nepochs=10, lr=1e-3, sparse_lambda=1, tai
         avg_Y_valid_loss = cum_Y_loss/len(valid_data)
         print("VALIDATION: avg_loss: {:3E}, Y_loss: {:3E}, tail_loss: {:3E}".format(
             cum_loss/len(valid_data), avg_Y_valid_loss, cum_tail_loss/len(valid_data)))
-        return avg_Y_loss, avg_Y_valid_loss
+    return avg_Y_loss, avg_Y_valid_loss
