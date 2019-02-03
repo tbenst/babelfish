@@ -3,10 +3,10 @@ import torch as T
 import torch.nn as nn
 import torch.nn.functional as F
 from ..volume import Vol2D
-from resnet import ResNet, BasicBlock
-from super_res import SuperResSkip
+from ..resnet import ResNet, BasicBlock
+from ..super_res import SuperResSkip
 from torch.utils.data import DataLoader, Dataset
-from misc import sigmoid_schedule
+from ..misc import sigmoid_schedule
 from tqdm import tqdm
 
 
