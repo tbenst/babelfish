@@ -5,3 +5,6 @@ pytest>=2.8.3
 tqdm>=4.8.4
 scikit-learn>=0.17.3
 pandas==0.19.2
+tifffile
+opencv-python
+dill
