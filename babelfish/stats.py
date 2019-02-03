@@ -4,7 +4,7 @@ import numpy as np
 from torch.utils.data import DataLoader, Dataset
 import itertools
 from tqdm import tqdm
-from volume import volume_mse
+from .volume import volume_mse
 
 def sampleMSE(model,data, batch_size=96):
     prev_frames = data.prev_frames

@@ -103,7 +103,7 @@ def pad_imaging(imaging, H, W):
     else:
         pad_left = int(np.floor((W-imaging.shape[3])/2))
         pad_right = int(np.ceil((W-imaging.shape[3])/2))
-        
+
     if not pad_right and not pad_bottom:
         return imaging
     elif pad_right and not pad_bottom:
@@ -124,18 +124,18 @@ def pad_image(image, H, W):
     if image.shape[0]==H:
         pad_top = False
     else:
-        pad_top = int(np.ceil((H-image.shape[0])/2))
-        pad_bottom = int(np.floor((H-image.shape[0])/2))
+        pad_top = int(np.floor((H-image.shape[0])/2))
+        pad_bottom = int(np.ceil((H-image.shape[0])/2))
     if image.shape[0]==W:
         pad_left = False
     else:
-        pad_left = int(np.ceil((W-image.shape[1])/2))
-        pad_right = int(np.floor((W-image.shape[1])/2))
+        pad_left = int(np.floor((W-image.shape[1])/2))
+        pad_right = int(np.ceil((W-image.shape[1])/2))
     if not pad_left and not pad_top:
         return image
-    elif pad_left and not pad_top:
+    elif pad_right and not pad_bottom:
         new_image[:,pad_left:(-pad_right)] = image
-    elif pad_top and not pad_left:
+    elif pad_bottom and not pad_right:
         new_image[pad_top:(-pad_bottom),:] = image
     else:
         new_image[pad_top:(-pad_bottom),pad_left:(-pad_right)] = image
@@ -202,7 +202,7 @@ def norm01(a):
 
 # def shift_image(a,dW,dH):
 #     new_a = np.zeros(*a.shape)
-    
+
 
 def read_cnmf(base_filename, nZ=11):
     planes = []
@@ -271,3 +271,15 @@ def train_test_split(nIdx, prev_frames=5, next_frames=5, n_per_sample=10, nchunk
         prev_stop = stop
     tvt["train"] += no_overlap_idx(prev_stop, nIdx, prev_frames, next_frames)
     return tvt
+
+def caiman_vec_to_2D(x, H, W):
+    return np.transpose(x.reshape(W,H))
+
+def caiman_px_to_dl_px(image, corners):
+    """Convert from Caiman image space, to DL image space
+    ie 0.5 downsample, crop, pad to 256 x 256
+    """
+    cropped = image[corners[0,0]:corners[1,0],corners[0,1]:corners[3,1]]
+    resized = cv2.resize(cropped, None, fx=0.5, fy=0.5, interpolation=cv2.INTER_LINEAR)
+    padded = pad_image(resized, 256, 256)
+    return padded

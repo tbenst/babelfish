@@ -1,6 +1,6 @@
 import torch as T
 import torch.nn as nn
-from volume import Vol2D
+from .volume import Vol2D
 
 class SuperResBlock(Vol2D):
     """Upsample Volume using subpixel convolution.
