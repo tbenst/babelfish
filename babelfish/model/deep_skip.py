@@ -2,7 +2,7 @@ from __future__ import print_function, division
 import torch as T
 import torch.nn as nn
 import torch.nn.functional as F
-from ../volume import Vol2D
+from ..volume import Vol2D
 from resnet import ResNet, BasicBlock
 from super_res import SuperResSkip
 from torch.utils.data import DataLoader, Dataset
@@ -19,7 +19,7 @@ class DeepSkip(Vol2D):
         self.nZ = nZ
         self.H = H
         self.W = W
-        self.lowH = 8
+        self.lowH = 16
         self.lowW = 16
         self.lowFeatures = 1
         self.prev_frames = prev_frames
@@ -45,7 +45,7 @@ class DeepSkip(Vol2D):
         # Decoding
         self.activation = nn.Tanh()
         # only use 10 embeddings for frame decoding, the other 10 are context
-        self.decoding = nn.Linear(nEmbedding/2,self.lowFeatures*nZ*self.lowH*self.lowW)
+        self.decoding = nn.Linear(self.nhalf_embed, self.lowFeatures*nZ*self.lowH*self.lowW)
         self.upconv1 = SuperResSkip(2,65,tensor)
         # 11 x 16 x 32
         self.upconv2 = SuperResSkip(2,65,tensor)

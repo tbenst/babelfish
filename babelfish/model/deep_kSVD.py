@@ -2,7 +2,7 @@ from __future__ import print_function, division
 import torch as T
 import torch.nn as nn
 import torch.nn.functional as F
-from ../volume import Vol2D
+from ..volume import Vol2D
 from resnet import ResNet, BasicBlock
 from super_res import SuperResBlock
 from torch.utils.data import DataLoader, Dataset
