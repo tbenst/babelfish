@@ -141,7 +141,6 @@ def unit_norm_KL_divergence(mu, logvar):
 
 def train(model,train_data,valid_data, nepochs=10, lr=1e-3, kl_lambda=1, kl_tail=1e2, half=False, cuda=True, batch_size=16, num_workers=8):
     dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-    valid_dataloader = DataLoader(valid_data, batch_size=batch_size, shuffle=True, num_workers=num_workers)
     kl_schedule = T.from_numpy(sigmoid_schedule(nepochs))
     if half:
         optimizer = apex.fp16_utils.FP16_Optimizer(T.optim.Adam(model.parameters(),lr=lr))
