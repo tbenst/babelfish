@@ -130,8 +130,8 @@ class ZebraFishDataCaiman(Dataset):
             Y["brain"].append(T.from_numpy(self.raw_data[ix]))
             Y["shock"].append(self.shocks[ix])
             Y["tail_movement"].append(self.tail_movements[ix])
-        if not structural is None:
-            for s in structural:
+        if not self.structural is None:
+            for s in self.structural:
                 X["brain"].append(s)
         X = {k: T.stack(v,0) for k,v in X.items()}
         Y = {k: T.stack(v,0) for k,v in Y.items()}
