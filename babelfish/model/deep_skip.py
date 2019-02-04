@@ -157,6 +157,7 @@ def train(model,train_data,valid_data, nepochs=10, lr=1e-3, kl_lambda=1, kl_tail
         cum_Y_loss = 0
         cum_kld_loss = 0
         cum_tail_loss = 0
+        i = 0
         for batch_data in tqdm(dataloader):
             X, Y = batch_data
             X, X_shock, X_tail = (X["brain"], X["shock"], X["tail_movement"])
@@ -194,15 +195,60 @@ def train(model,train_data,valid_data, nepochs=10, lr=1e-3, kl_lambda=1, kl_tail
             cum_tail_loss += float(mse_tail)
 
         avg_Y_loss = cum_Y_loss/len(train_data)
+        avg_X_loss = cum_X_loss/len(train_data)
         print("avg_loss: {:3E}, X_loss: {:3E}, Y_loss: {:3E}, KLD: {:3E}, tail_loss: {:3E}".format(
-            cum_loss/len(train_data), cum_X_loss/len(train_data), avg_Y_loss, cum_kld_loss/len(train_data), cum_tail_loss/len(train_data)))
-        cum_loss = 0
-        cum_X_loss = 0
-        cum_Y_loss = 0
-        cum_kld_loss = 0
-        cum_tail_loss = 0
+            cum_loss/len(train_data), avg_X_loss, avg_Y_loss, cum_kld_loss/len(train_data), cum_tail_loss/len(train_data)))
+#         cum_loss = 0
+#         cum_X_loss = 0
+#         cum_Y_loss = 0
+#         cum_kld_loss = 0
+#         cum_tail_loss = 0
+#         model.eval()
+#         gc.collect()
+#         for batch_data in valid_dataloader:
+#             X, Y = batch_data
+#             X, X_shock, X_tail = (X["brain"], X["shock"], X["tail_movement"])
+#             Y, Y_shock, Y_tail = (Y["brain"], Y["shock"], Y["tail_movement"])
+#             if cuda:
+#                 X = X.cuda()
+#                 Y = Y.cuda()
+#                 X_shock = X_shock.cuda()
+#                 Y_shock = Y_shock.cuda()
+#                 X_tail = X_tail.cuda()
+#                 Y_tail = Y_tail.cuda()
+#             (X_pred, X_pred_tail), (Y_pred, Y_pred_tail), mean, logvar = model(X, Y_shock)
+#             if half:
+#                 X_pred = X_pred.float()
+#                 Y_pred = Y_pred.float()
+#                 mean = mean.float()
+#                 logvar = logvar.float()
+#             kld = unit_norm_KL_divergence(mean, logvar)
+#             mse_X = F.mse_loss(X_pred, Y[:,0])
+#             mse_Y = F.mse_loss(Y_pred, Y[:,-1])
+#             mse_tail = F.mse_loss(X_pred_tail, X_tail[:,[-1]])
+#             loss = mse_X + mse_Y + kl_lambda*kl_schedule[e] * kld + kl_tail*mse_tail
+#             cum_loss += float(loss)
+#             cum_X_loss += float(mse_X)
+#             cum_Y_loss += float(mse_Y)
+#             cum_kld_loss += float(kld)
+#             cum_tail_loss += float(mse_tail)
+#         model.train()
+#         avg_Y_valid_loss = cum_Y_loss/len(valid_data)
+#         print("VALIDATION: avg_loss: {:3E}, X_loss: {:3E}, Y_loss: {:3E}, KLD: {:3E}, tail_loss: {:3E}".format(
+#             cum_loss/len(valid_data), cum_X_loss/len(valid_data), avg_Y_valid_loss, cum_kld_loss/len(valid_data), cum_tail_loss/len(valid_data)))
+    return avg_X_loss, avg_Y_loss, avg_Y_valid_loss
+
+
+def validation_loss(model,valid_data, kl_lambda=1, kl_tail=1e2, half=False, cuda=True, batch_size=16, num_workers=8):
+    valid_dataloader = DataLoader(valid_data, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    cum_loss = 0
+    cum_X_loss = 0
+    cum_Y_loss = 0
+    cum_kld_loss = 0
+    cum_tail_loss = 0
+    with T.no_grad():
         model.eval()
-        for batch_data in valid_dataloader:
+        for batch_data in tqdm(valid_dataloader):
             X, Y = batch_data
             X, X_shock, X_tail = (X["brain"], X["shock"], X["tail_movement"])
             Y, Y_shock, Y_tail = (Y["brain"], Y["shock"], Y["tail_movement"])
@@ -223,14 +269,15 @@ def train(model,train_data,valid_data, nepochs=10, lr=1e-3, kl_lambda=1, kl_tail
             mse_X = F.mse_loss(X_pred, Y[:,0])
             mse_Y = F.mse_loss(Y_pred, Y[:,-1])
             mse_tail = F.mse_loss(X_pred_tail, X_tail[:,[-1]])
-            loss = mse_X + mse_Y + kl_lambda*kl_schedule[e] * kld + kl_tail*mse_tail
+            loss = mse_X + mse_Y + kl_lambda * kld + kl_tail*mse_tail
             cum_loss += float(loss)
             cum_X_loss += float(mse_X)
             cum_Y_loss += float(mse_Y)
             cum_kld_loss += float(kld)
             cum_tail_loss += float(mse_tail)
-        model.train()
-        avg_Y_valid_loss = cum_Y_loss/len(valid_data)
-        print("VALIDATION: avg_loss: {:3E}, X_loss: {:3E}, Y_loss: {:3E}, KLD: {:3E}, tail_loss: {:3E}".format(
-            cum_loss/len(valid_data), cum_X_loss/len(valid_data), avg_Y_valid_loss, cum_kld_loss/len(valid_data), cum_tail_loss/len(valid_data)))
-    return avg_Y_loss, avg_Y_valid_loss
+    model.train()
+    avg_Y_valid_loss = cum_Y_loss/len(valid_data)
+    avg_X_valid_loss = cum_X_loss/len(valid_data)
+    print("VALIDATION: avg_loss: {:3E}, X_loss: {:3E}, Y_loss: {:3E}, KLD: {:3E}, tail_loss: {:3E}".format(
+    cum_loss/len(valid_data), cum_X_loss/len(valid_data), avg_Y_valid_loss, cum_kld_loss/len(valid_data), cum_tail_loss/len(valid_data)))
+    return avg_X_valid_loss, avg_Y_valid_loss
