@@ -98,8 +98,8 @@ class ZebraFishDataCaiman(Dataset):
         raw_data = raw_imaging - raw_imaging.mean(0)
         denoised_data = denoised_imaging - denoised_imaging.mean(0)
         # use channel for future / prev frames
-        self.denoised_data = T.from_numpy(denoised_data)
-        self.raw_data = T.from_numpy(raw_data)
+        self.denoised_data = denoised_data
+        self.raw_data = raw_data
         self.prev_frames = prev_frames
         self.next_frames = next_frames
         self.shocks = shocks
@@ -123,12 +123,12 @@ class ZebraFishDataCaiman(Dataset):
         Y = {"brain": [], "shock": [], "tail_movement": []}
         for i in reversed(range(self.prev_frames)):
             ix = idx-i
-            X["brain"].append(self.denoised_data[ix])
+            X["brain"].append(T.from_numpy(self.denoised_data[ix]))
             X["shock"].append(self.shocks[ix])
             X["tail_movement"].append(self.tail_movements[ix])
         for i in range(1,self.next_frames+1):
             ix = idx+i
-            Y["brain"].append(self.raw_data[ix])
+            Y["brain"].append(T.from_numpy(self.raw_data[ix]))
             Y["shock"].append(self.shocks[ix])
             Y["tail_movement"].append(self.tail_movements[ix])
         for s in structural:
