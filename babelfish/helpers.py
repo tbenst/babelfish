@@ -271,15 +271,3 @@ def train_test_split(nIdx, prev_frames=5, next_frames=5, n_per_sample=10, nchunk
         prev_stop = stop
     tvt["train"] += no_overlap_idx(prev_stop, nIdx, prev_frames, next_frames)
     return tvt
-
-def caiman_vec_to_2D(x, H, W):
-    return np.transpose(x.reshape(W,H))
-
-def caiman_px_to_dl_px(image, corners):
-    """Convert from Caiman image space, to DL image space
-    ie 0.5 downsample, crop, pad to 256 x 256
-    """
-    cropped = image[corners[0,0]:corners[1,0],corners[0,1]:corners[3,1]]
-    resized = cv2.resize(cropped, None, fx=0.5, fy=0.5, interpolation=cv2.INTER_LINEAR)
-    padded = pad_image(resized, 256, 256)
-    return padded

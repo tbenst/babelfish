@@ -2,11 +2,11 @@ from __future__ import print_function, division
 import torch as T
 import torch.nn as nn
 import torch.nn.functional as F
-from ..volume import Vol2D
-from ..resnet import ResNet, BasicBlock
-from ..super_res import SuperResSkip
+from ../volume import Vol2D
+from resnet import ResNet, BasicBlock
+from super_res import SuperResSkip
 from torch.utils.data import DataLoader, Dataset
-from ..misc import sigmoid_schedule
+from misc import sigmoid_schedule
 from tqdm import tqdm
 
 
@@ -19,7 +19,7 @@ class DeepSkip(Vol2D):
         self.nZ = nZ
         self.H = H
         self.W = W
-        self.lowH = 16
+        self.lowH = 8
         self.lowW = 16
         self.lowFeatures = 1
         self.prev_frames = prev_frames
@@ -45,7 +45,7 @@ class DeepSkip(Vol2D):
         # Decoding
         self.activation = nn.Tanh()
         # only use 10 embeddings for frame decoding, the other 10 are context
-        self.decoding = nn.Linear(self.nhalf_embed, self.lowFeatures*nZ*self.lowH*self.lowW)
+        self.decoding = nn.Linear(nEmbedding/2,self.lowFeatures*nZ*self.lowH*self.lowW)
         self.upconv1 = SuperResSkip(2,65,tensor)
         # 11 x 16 x 32
         self.upconv2 = SuperResSkip(2,65,tensor)
@@ -141,6 +141,7 @@ def unit_norm_KL_divergence(mu, logvar):
 
 def train(model,train_data,valid_data, nepochs=10, lr=1e-3, kl_lambda=1, kl_tail=1e2, half=False, cuda=True, batch_size=16, num_workers=8):
     dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    valid_dataloader = DataLoader(valid_data, batch_size=batch_size, shuffle=True, num_workers=num_workers)
     kl_schedule = T.from_numpy(sigmoid_schedule(nepochs))
     if half:
         optimizer = apex.fp16_utils.FP16_Optimizer(T.optim.Adam(model.parameters(),lr=lr))
@@ -156,7 +157,6 @@ def train(model,train_data,valid_data, nepochs=10, lr=1e-3, kl_lambda=1, kl_tail
         cum_Y_loss = 0
         cum_kld_loss = 0
         cum_tail_loss = 0
-        i = 0
         for batch_data in tqdm(dataloader):
             X, Y = batch_data
             X, X_shock, X_tail = (X["brain"], X["shock"], X["tail_movement"])
@@ -194,22 +194,15 @@ def train(model,train_data,valid_data, nepochs=10, lr=1e-3, kl_lambda=1, kl_tail
             cum_tail_loss += float(mse_tail)
 
         avg_Y_loss = cum_Y_loss/len(train_data)
-        avg_X_loss = cum_X_loss/len(train_data)
         print("avg_loss: {:3E}, X_loss: {:3E}, Y_loss: {:3E}, KLD: {:3E}, tail_loss: {:3E}".format(
-            cum_loss/len(train_data), avg_X_loss, avg_Y_loss, cum_kld_loss/len(train_data), cum_tail_loss/len(train_data)))
-    return avg_X_loss, avg_Y_loss
-
-
-def validation_loss(model,valid_data, kl_lambda=1, kl_tail=1e2, half=False, cuda=True, batch_size=16, num_workers=8):
-    valid_dataloader = DataLoader(valid_data, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-    cum_loss = 0
-    cum_X_loss = 0
-    cum_Y_loss = 0
-    cum_kld_loss = 0
-    cum_tail_loss = 0
-    with T.no_grad():
+            cum_loss/len(train_data), cum_X_loss/len(train_data), avg_Y_loss, cum_kld_loss/len(train_data), cum_tail_loss/len(train_data)))
+        cum_loss = 0
+        cum_X_loss = 0
+        cum_Y_loss = 0
+        cum_kld_loss = 0
+        cum_tail_loss = 0
         model.eval()
-        for batch_data in tqdm(valid_dataloader):
+        for batch_data in valid_dataloader:
             X, Y = batch_data
             X, X_shock, X_tail = (X["brain"], X["shock"], X["tail_movement"])
             Y, Y_shock, Y_tail = (Y["brain"], Y["shock"], Y["tail_movement"])
@@ -230,15 +223,45 @@ def validation_loss(model,valid_data, kl_lambda=1, kl_tail=1e2, half=False, cuda
             mse_X = F.mse_loss(X_pred, Y[:,0])
             mse_Y = F.mse_loss(Y_pred, Y[:,-1])
             mse_tail = F.mse_loss(X_pred_tail, X_tail[:,[-1]])
-            loss = mse_X + mse_Y + kl_lambda * kld + kl_tail*mse_tail
+            loss = mse_X + mse_Y + kl_lambda*kl_schedule[e] * kld + kl_tail*mse_tail
             cum_loss += float(loss)
             cum_X_loss += float(mse_X)
             cum_Y_loss += float(mse_Y)
             cum_kld_loss += float(kld)
             cum_tail_loss += float(mse_tail)
-    model.train()
-    avg_Y_valid_loss = cum_Y_loss/len(valid_data)
-    avg_X_valid_loss = cum_X_loss/len(valid_data)
-    print("VALIDATION: avg_loss: {:3E}, X_loss: {:3E}, Y_loss: {:3E}, KLD: {:3E}, tail_loss: {:3E}".format(
-    cum_loss/len(valid_data), cum_X_loss/len(valid_data), avg_Y_valid_loss, cum_kld_loss/len(valid_data), cum_tail_loss/len(valid_data)))
-    return avg_X_valid_loss, avg_Y_valid_loss
+        model.train()
+        avg_Y_valid_loss = cum_Y_loss/len(valid_data)
+        print("VALIDATION: avg_loss: {:3E}, X_loss: {:3E}, Y_loss: {:3E}, KLD: {:3E}, tail_loss: {:3E}".format(
+            cum_loss/len(valid_data), cum_X_loss/len(valid_data), avg_Y_valid_loss, cum_kld_loss/len(valid_data), cum_tail_loss/len(valid_data)))
+    return avg_Y_loss, avg_Y_valid_loss
+
+def deep_skip_predict(model, batch, mask, plane):
+    with T.no_grad():
+        model.eval()
+        X, Y = batch
+        X, X_shock, X_tail = (X["brain"], X["shock"], X["tail_movement"])
+        X = X[None]
+        X_shock = X_shock[None]
+        X_tail = X_tail[None]
+        Y, Y_shock, Y_tail = (Y["brain"], Y["shock"], Y["tail_movement"])
+        Y = Y[None]
+        Y_shock = Y_shock[None]
+        Y_tail = Y_tail[None]
+        if cuda:
+            X = X.cuda()
+            Y = Y.cuda()
+            X_shock = X_shock.cuda()
+            Y_shock = Y_shock.cuda()
+            X_tail = X_tail.cuda()
+            Y_tail = Y_tail.cuda()
+        (X_pred, X_pred_tail), (Y_pred, Y_pred_tail), mean, logvar = model(X, Y_shock)
+        if half:
+            X_pred = X_pred.float()
+            Y_pred = Y_pred.float()
+            mean = mean.float()
+            logvar = logvar.float()
+        tmask = T.from_numpy(mask).cuda()
+#         mse_Y = F.mse_loss(Y_pred[0,p]*tmask, Y[0,-1,p]*tmask, size_average=False)
+        mse_Y = T.sqrt(T.sum((Y_pred[0,plane]*tmask - Y[0,-1,plane]*tmask)**2))
+        model.train()
+        return mse_Y, Y_pred
