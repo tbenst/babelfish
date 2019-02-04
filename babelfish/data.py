@@ -94,12 +94,11 @@ class ZebraFishDataCaiman(Dataset):
     """
     def __init__(self, denoised_imaging, raw_imaging, structural, shocks, tail_movements,
                  index_map=None, prev_frames=2, next_frames=1):
+        # assumes already mean subtracted
         assert np.all(denoised_imaging.shape == raw_imaging.shape)
-        raw_data = raw_imaging - raw_imaging.mean(0)
-        denoised_data = denoised_imaging - denoised_imaging.mean(0)
         # use channel for future / prev frames
-        self.denoised_data = denoised_data
-        self.raw_data = raw_data
+        self.denoised_data = denoised_imaging
+        self.raw_data = raw_imaging
         self.prev_frames = prev_frames
         self.next_frames = next_frames
         self.shocks = shocks
