@@ -10,19 +10,20 @@ if len(sys.argv)==1:
 example: python main.py 0 freeze""")
     indicator = 0
     gpu_idx = str(1)
+    exit()
 else:
     # gpu_idx = sys.argv[1]
     indicator = int(sys.argv[1])
     model = sys.argv[2]
 
 if model=="skip":
-    from deepfish.deep_skip import DeepSkip, train
+    from babelfish.deep_skip import DeepSkip, train
     Model = DeepSkip
 elif model=='kSVD':
-    from deepfish.deep_kSVD import Deep_KSVD, train
+    from babelfish.deep_kSVD import Deep_KSVD, train
     Model = Deep_KSVD
 elif model=='freeze':
-    from deepfish.deep_freeze import DeepFreeze, train, trainBoth
+    from babelfish.deep_freeze import DeepFreeze, train, trainBoth
     Model = DeepFreeze
     train = trainBoth
 
@@ -80,14 +81,14 @@ tmp_dir = '/tmp/'
 all_data = p2putils.get_all_datasets(tmp_dir=tmp_dir)
 
 sys.path.insert(0,".")
-from deepfish.helpers import get_frames_from_z, get_imaging_from_fish, gen_imaging, resize_volume, resize_batch, read_cnmf, no_overlap_idx, train_valid_test_split, train_test_split, pad_imaging
+from babelfish.helpers import get_frames_from_z, get_imaging_from_fish, gen_imaging, resize_volume, resize_batch, read_cnmf, no_overlap_idx, train_valid_test_split, train_test_split, pad_imaging
 
-from deepfish.stats import sampleMSE
-from deepfish.plot import interpret, plot_model_vs_real, makePredVideo, MSEbyDist
+from babelfish.stats import sampleMSE
+from babelfish.plot import interpret, plot_model_vs_real, makePredVideo, MSEbyDist
 
-from deepfish.data import ZebraFishData
-# from deepfish.deep_kSVD import Deep_KSVD, train
-from deepfish.half_precision import network_to_half
+from babelfish.data import ZebraFishData
+# from babelfish.deep_kSVD import Deep_KSVD, train
+from babelfish.half_precision import network_to_half
 
 fishIdx = [("e", 2),  ("e", 5), ("c", 1),  ("c", 6),  ("enp", 1), ("enp", 5)]
 
