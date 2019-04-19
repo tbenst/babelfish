@@ -17,13 +17,13 @@ else:
     model = sys.argv[2]
 
 if model=="skip":
-    from babelfish.deep_skip import DeepSkip, train
+    from babelfish.model.deep_skip import DeepSkip, train
     Model = DeepSkip
 elif model=='kSVD':
-    from babelfish.deep_kSVD import Deep_KSVD, train
+    from babelfish.model.deep_kSVD import Deep_KSVD, train
     Model = Deep_KSVD
 elif model=='freeze':
-    from babelfish.deep_freeze import DeepFreeze, train, trainBoth
+    from babelfish.model.deep_freeze import DeepFreeze, train, trainBoth
     Model = DeepFreeze
     train = trainBoth
 
@@ -62,8 +62,8 @@ import resource
 import torch.nn as nn
 import math
 import torch.utils.model_zoo as model_zoo
-import apex # https://github.com/NVIDIA/apex.git
-from apex.amp import amp
+# import apex # https://github.com/NVIDIA/apex.git
+# from apex.amp import amp
 
 
 import os, sys, datetime
