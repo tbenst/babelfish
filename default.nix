@@ -5,7 +5,7 @@ with pythonPackages;
 
 buildPythonPackage rec {
   name = "mypackage";
-  src = /home/tyler/code/babel_fish;
+  src = /home/tyler/code/babelfish;
   doCheck = true;
   checkPhase = ''
     python -m unittest discover
