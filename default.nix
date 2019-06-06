@@ -1,7 +1,7 @@
 { pkgs ? import <nixpkgs> {}
-, pythonPackages ? pkgs.python37Packages
+, python37Packages ? pkgs.python37Packages
 }:
-with pythonPackages;
+with python37Packages;
 
 buildPythonPackage rec {
   name = "mypackage";
