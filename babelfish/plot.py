@@ -4,7 +4,8 @@ import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import numpy as np
 from torch.utils.data import DataLoader, Dataset
-import skvideo.io
+# TODO switch to moviepy
+# import skvideo.io
 
 
 def plot_model_vs_real(model,data):
@@ -150,7 +151,6 @@ def scale_for_vid(arr):
     return ((arr - arr.min()) * (1/(arr.max() - arr.min()) * 255)).astype('uint8')
 
 
-import skvideo.io
 def scale_for_vid(arr, mymin, mymax):
     return ((arr - mymin) * (1/(mymax - mymin)) * 255).astype('uint8')
 
