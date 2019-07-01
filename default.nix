@@ -11,16 +11,24 @@ buildPythonPackage rec {
     python -m unittest discover
   '';
   propagatedBuildInputs = [
+    bokeh
+    cython
     dill
+    future
     h5py
     joblib
     matplotlib
+    moviepy
+    nose
     numpy
     opencv3
     pandas
+    pims
     pytest
     pytorch
     scikitlearn
+    scikitimage
+    scipy
     seaborn
     torchvision
     tqdm

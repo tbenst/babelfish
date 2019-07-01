@@ -1,4 +1,3 @@
-#FROM continuumio/anaconda3:2019.03
 FROM nvidia/cuda:10.1-cudnn7-devel
 
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
@@ -14,15 +13,12 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-4.5.11-Linux-x86
     rm ~/miniconda.sh && \
     /opt/conda/bin/conda clean -tipsy && \
     ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
-    echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc 
+    echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc
 
-ENV bf /opt/babelfish
-COPY . $bf
-RUN conda env update -n babel -f  $bf/environment.yml
+COPY environment.yml /tmp/
+RUN conda env update -n babel -f  /tmp/environment.yml
 RUN echo ". activate babel" > ~/.bashrc
 ENV PATH /opt/conda/envs/env/bin:$PATH
 WORKDIR /Notebooks
-#ENTRYPOINT ["python scripts/main.py"]
+
 CMD ["/opt/conda/envs/babel/bin/jupyter lab --ip 0.0.0.0 --no-browser --port 8880 --allow-root"]
-
-

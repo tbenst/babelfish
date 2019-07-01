@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from torch.utils.data import DataLoader, Dataset
 # TODO switch to moviepy
-# import skvideo.io
+import skvideo.io
 
 
 def plot_model_vs_real(model,data):
@@ -161,8 +161,8 @@ def makePredVideo(model, data, batch_size=32, num_workers=12, name="test"):
     dataloader = DataLoader(data, batch_size=batch_size, shuffle=False, num_workers=num_workers)
     writer = skvideo.io.FFmpegWriter(name+".mp4",outputdict={
         '-b': '30000000', '-vcodec': 'libx264'})
-    mymax = float(T.cat([test_data[i][0]['brain'] for i in np.arange(len(test_data))]).max())
-    mymin = float(T.cat([test_data[i][0]['brain'] for i in np.arange(len(test_data))]).min())
+    mymax = float(T.cat([data[i][0]['brain'] for i in np.arange(len(data))]).max())
+    mymin = float(T.cat([data[i][0]['brain'] for i in np.arange(len(data))]).min())
     for batch_data in dataloader:
         X, Y = batch_data
         X, X_shock, X_tail = (X["brain"], X["shock"], X["tail_movement"])
