@@ -31,8 +31,6 @@ class SuperResBlock(Vol2D):
         x = self.activation(self.vol_BatchNorm2d(self.vol_conv2d(x, self.dconv3, self.dpad3), self.dbn3))
         x = self.vol_conv2d(x, self.dconv4, self.dpad4)
         x = self.vol_PixelShuffle(x)
-        # add back single channel
-        x = x[:,:,None]
         return x
 
     def initialize_weights(self):
