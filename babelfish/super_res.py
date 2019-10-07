@@ -6,7 +6,7 @@ class SuperResBlock(Vol2D):
     """Upsample Volume using subpixel convolution.
 
     Reference: https://arxiv.org/pdf/1609.05158.pdf"""
-    def __init__(self, upscale_factor, in_channels=1, tensor=T.cuda.FloatTensor):
+    def __init__(self, upscale_factor, in_channels=1, tensor=T.cuda.FloatTensor, out_channels=1):
         super(SuperResBlock, self).__init__(tensor)
         self.tensor = tensor
         self.activation = nn.ReLU()
@@ -19,7 +19,7 @@ class SuperResBlock(Vol2D):
         self.dconv3 = nn.Parameter(self.tensor(32,64,3,3))
         self.dpad3 = (1,1)
         self.dbn3 = nn.BatchNorm2d(32)
-        self.dconv4 = nn.Parameter(self.tensor(upscale_factor**2,32,3,3))
+        self.dconv4 = nn.Parameter(self.tensor(out_channels*upscale_factor**2,32,3,3))
         self.dpad4 = (1,1)
         self.pixel_shuffle = nn.PixelShuffle(upscale_factor)
 
@@ -31,8 +31,6 @@ class SuperResBlock(Vol2D):
         x = self.activation(self.vol_BatchNorm2d(self.vol_conv2d(x, self.dconv3, self.dpad3), self.dbn3))
         x = self.vol_conv2d(x, self.dconv4, self.dpad4)
         x = self.vol_PixelShuffle(x)
-        # add back single channel
-        x = x[:,:,None]
         return x
 
     def initialize_weights(self):
@@ -52,7 +50,7 @@ class SuperResSkip(Vol2D):
     """Upsample Volume using subpixel convolution.
 
     Reference: https://arxiv.org/pdf/1609.05158.pdf"""
-    def __init__(self, upscale_factor, in_channels=1, tensor=T.cuda.FloatTensor):
+    def __init__(self, upscale_factor, in_channels=1, tensor=T.cuda.FloatTensor, out_channels=1):
         super(SuperResSkip, self).__init__(tensor)
         self.tensor = tensor
         self.activation = nn.ReLU()
@@ -65,7 +63,7 @@ class SuperResSkip(Vol2D):
         self.dconv3 = nn.Parameter(self.tensor(32,64,3,3))
         self.dpad3 = (1,1)
         self.dbn3 = nn.BatchNorm2d(32)
-        self.dconv4 = nn.Parameter(self.tensor(upscale_factor**2,32,3,3))
+        self.dconv4 = nn.Parameter(self.tensor(out_channels*upscale_factor**2,32,3,3))
         self.dpad4 = (1,1)
         self.pixel_shuffle = nn.PixelShuffle(upscale_factor)
 

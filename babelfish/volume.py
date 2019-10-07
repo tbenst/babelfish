@@ -11,10 +11,10 @@ class Vol2D(nn.Module):
     def vol_PixelShuffle(self, x):
         # Helper for subpixel convolution
         first = self.pixel_shuffle(x[:,0])
-        # b x z x H x W
-        ret = self.tensor(x.shape[0],x.shape[1],first.shape[2], first.shape[3])
+        # b x z x C x H x W
+        ret = self.tensor(x.shape[0],x.shape[1],first.shape[1], first.shape[2], first.shape[3])
         for z in range(x.shape[1]):
-            ret[:,z] = self.pixel_shuffle(x[:,z])[:,0]
+            ret[:,z] = self.pixel_shuffle(x[:,z])
         return ret
 
         # batch x Z*C x H x W
