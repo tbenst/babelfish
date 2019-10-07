@@ -1,0 +1,19 @@
+version: "2.3"
+services:
+  babelfish:
+    build: .
+    command: >
+      bash -c "cd /code/babelfish
+      && . activate babel
+      && python setup.py develop
+      && cd /Notebooks
+      && jupyter lab --ip 0.0.0.0 --no-browser --port 8880 --allow-root
+        --NotebookApp.custom_display_url=http://localhost:8880"
+    runtime: nvidia
+    ports:
+      - "8880:8880"
+    volumes:
+      - ~/code:/code
+      - /data:/data
+      - ~/lib:/opt/lib
+      - ~/Notebooks:/Notebooks
