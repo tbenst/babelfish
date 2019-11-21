@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from torch.utils.data import DataLoader, Dataset
 # TODO switch to moviepy
-import skvideo.io
+# import skvideo.io
 
 
 def plot_model_vs_real(model,data):
