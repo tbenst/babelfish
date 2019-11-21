@@ -1,0 +1,10 @@
+# WIP - need mlflow nixpkg
+# nix 2.3
+FROM nixos/nix:sha256:af330838e838cedea2355e7ca267280fc9dd68615888f4e20972ec51beb101d8
+
+RUN nix-env -i git
+ENV NIX_PATH="nixpkgs=/nixpkgs:$NIX_PATH"
+RUN git clone https://github.com/NixOS/nixpkgs.git
+RUN git checkout -C nixpkgs c1966522d7d5fa54db068140d212cba18731dd98
+
+RUN nix-env -i .
