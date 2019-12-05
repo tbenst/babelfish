@@ -1,0 +1,5 @@
+#! /usr/bin/env nix-shell
+#! nix-shell -I nixpkgs=https://github.com/tbenst/nixpkgs/archive/21bd378546d37630824270903a49b20a68783453.tar.gz
+#! nix-shell ../default.nix -i python
+
+print("hello world")
