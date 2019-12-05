@@ -13,10 +13,14 @@ let
         /* numpy = python-super.numpy.override { blas = super.mkl; }; */
       };
       python = super.python.override {packageOverrides = self.pythonOverrides;};
+      ffmpeg-full = super.ffmpeg-full.override {
+        nonfreeLicensing = true;
+        nvenc = true; # nvidia support
+      };
     }
   )];
   pkgs = import <nixpkgs> { inherit overlays;};
-  mkDerivation = import ./autotools.nix pkgs;
+  # mkDerivation = import ./autotools.nix pkgs;
 in
 with pkgs.python37Packages;
 buildPythonPackage rec {
@@ -34,6 +38,7 @@ buildPythonPackage rec {
     h5py
     joblib
     matplotlib
+    mlflow
     moviepy
     nose
     numpy
