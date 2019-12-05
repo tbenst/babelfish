@@ -1,0 +1,24 @@
+#!/usr/bin/env python
+import nrrd
+import tifffile
+import os
+import sys
+from sys import argv
+from glob import glob
+
+if len(argv)!=2:
+    print("Usage: ome2nrrd <folder>\nConverts all .ome.btf and .ome.tif files to .nrrd files.")
+    sys.exit()
+
+folder = argv[1]
+files = glob(folder + "*.ome.btf") + glob(folder + "*.ome.tif")
+
+
+for file in files:
+    print("Processing " + file)
+    name, ext = os.path.splitext(file)
+    name, ext2 = os.path.splitext(name)
+    ext = ext + ext2
+    tiff = tifffile.imread(file)
+    nrrd_file = name+".nrrd"
+    nrrd.write(nrrd_file, tiff)
