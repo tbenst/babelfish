@@ -1,8 +1,24 @@
-{ pkgs ? import <nixpkgs> {}
-, python37Packages ? pkgs.python37Packages
-}:
-with python37Packages;
-
+let
+  overlays = [
+    (self: super: {
+      pythonOverrides = python-self: python-super: {
+        opencv3 = python-super.opencv3.override {
+          enableCuda = true;
+          enableFfmpeg = true;
+        };
+        pytorch = python-super.pytorch.override {
+          cudaSupport = true;
+          mklSupport = true;
+        };
+        /* numpy = python-super.numpy.override { blas = super.mkl; }; */
+      };
+      python = super.python.override {packageOverrides = self.pythonOverrides;};
+    }
+  )];
+  pkgs = import <nixpkgs> { inherit overlays;};
+  mkDerivation = import ./autotools.nix pkgs;
+in
+with pkgs.python37Packages;
 buildPythonPackage rec {
   name = "mypackage";
   src = ./babelfish;
