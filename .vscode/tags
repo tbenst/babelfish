@@ -1,0 +1,631 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	Development	//
+BN_convert_float	../babelfish/half_precision.py	/^def BN_convert_float(module):$/;"	kind:function	line:19
+BasicBlock	../babelfish/model/deep_freeze.py	/^from ..resnet import ResNet, BasicBlock$/;"	kind:namespace	line:6
+BasicBlock	../babelfish/model/deep_kSVD.py	/^from ..resnet import ResNet, BasicBlock$/;"	kind:namespace	line:6
+BasicBlock	../babelfish/model/deep_multivariate.py	/^from ..resnet import ResNet, BasicBlock$/;"	kind:namespace	line:6
+BasicBlock	../babelfish/model/deep_skip.py	/^from ..resnet import ResNet, BasicBlock$/;"	kind:namespace	line:6
+BasicBlock	../babelfish/resnet.py	/^class BasicBlock(nn.Module):$/;"	kind:class	line:12
+CustomizedDist	../.eggs/pytest_runner-4.4-py3.7.egg/ptr.py	/^class CustomizedDist(Distribution):$/;"	kind:class	line:35
+CustomizedDist	../.eggs/pytest_runner-5.2-py3.6.egg/ptr.py	/^class CustomizedDist(Distribution):$/;"	kind:class	line:35
+DataFrame	../babelfish/caiman.py	/^from pandas import DataFrame$/;"	kind:namespace	line:19
+DataFrame	../babelfish/helpers.py	/^from pandas import DataFrame$/;"	kind:namespace	line:20
+DataFrame	../scripts/main.py	/^from pandas import DataFrame$/;"	kind:namespace	line:54
+DataLoader	../babelfish/caiman.py	/^from torch.utils.data import DataLoader, Dataset$/;"	kind:namespace	line:6
+DataLoader	../babelfish/data.py	/^from torch.utils.data import DataLoader, Dataset$/;"	kind:namespace	line:4
+DataLoader	../babelfish/helpers.py	/^from torch.utils.data import DataLoader, Dataset$/;"	kind:namespace	line:7
+DataLoader	../babelfish/model/deep_freeze.py	/^from torch.utils.data import DataLoader, Dataset$/;"	kind:namespace	line:8
+DataLoader	../babelfish/model/deep_kSVD.py	/^from torch.utils.data import DataLoader, Dataset$/;"	kind:namespace	line:8
+DataLoader	../babelfish/model/deep_multivariate.py	/^from torch.utils.data import DataLoader, Dataset$/;"	kind:namespace	line:8
+DataLoader	../babelfish/model/deep_skip.py	/^from torch.utils.data import DataLoader, Dataset$/;"	kind:namespace	line:8
+DataLoader	../babelfish/plot.py	/^from torch.utils.data import DataLoader, Dataset$/;"	kind:namespace	line:6
+DataLoader	../babelfish/stats.py	/^from torch.utils.data import DataLoader, Dataset$/;"	kind:namespace	line:4
+DataLoader	../scripts/main.py	/^from torch.utils.data import DataLoader, Dataset$/;"	kind:namespace	line:41
+Dataset	../babelfish/caiman.py	/^from torch.utils.data import DataLoader, Dataset$/;"	kind:namespace	line:6
+Dataset	../babelfish/data.py	/^from torch.utils.data import DataLoader, Dataset$/;"	kind:namespace	line:4
+Dataset	../babelfish/helpers.py	/^from torch.utils.data import DataLoader, Dataset$/;"	kind:namespace	line:7
+Dataset	../babelfish/model/deep_freeze.py	/^from torch.utils.data import DataLoader, Dataset$/;"	kind:namespace	line:8
+Dataset	../babelfish/model/deep_kSVD.py	/^from torch.utils.data import DataLoader, Dataset$/;"	kind:namespace	line:8
+Dataset	../babelfish/model/deep_multivariate.py	/^from torch.utils.data import DataLoader, Dataset$/;"	kind:namespace	line:8
+Dataset	../babelfish/model/deep_skip.py	/^from torch.utils.data import DataLoader, Dataset$/;"	kind:namespace	line:8
+Dataset	../babelfish/plot.py	/^from torch.utils.data import DataLoader, Dataset$/;"	kind:namespace	line:6
+Dataset	../babelfish/stats.py	/^from torch.utils.data import DataLoader, Dataset$/;"	kind:namespace	line:4
+Dataset	../scripts/main.py	/^from torch.utils.data import DataLoader, Dataset$/;"	kind:namespace	line:41
+Decoder	../babelfish/model/deep_freeze.py	/^class Decoder(Vol2D):$/;"	kind:class	line:85
+DeepFreeze	../babelfish/model/deep_freeze.py	/^class DeepFreeze(Vol2D):$/;"	kind:class	line:134
+DeepFreeze	../scripts/main.py	/^    from babelfish.model.deep_freeze import DeepFreeze, train, trainBoth$/;"	kind:namespace	line:26
+DeepMultivariate	../babelfish/model/deep_multivariate.py	/^class DeepMultivariate(Vol2D):$/;"	kind:class	line:14
+DeepSkip	../babelfish/model/deep_skip.py	/^class DeepSkip(Vol2D):$/;"	kind:class	line:14
+DeepSkip	../scripts/main.py	/^    from babelfish.model.deep_skip import DeepSkip, train$/;"	kind:namespace	line:20
+DeepSkip	../scripts/skip.py	/^from babelfish.model.deep_skip import DeepSkip, train$/;"	kind:namespace	line:1
+Deep_KSVD	../babelfish/model/deep_kSVD.py	/^class Deep_KSVD(Vol2D):$/;"	kind:class	line:13
+Deep_KSVD	../scripts/main.py	/^    from babelfish.model.deep_kSVD import Deep_KSVD, train$/;"	kind:namespace	line:23
+Distribution	../.eggs/pytest_runner-4.4-py3.7.egg/ptr.py	/^from setuptools import Distribution$/;"	kind:namespace	line:21
+Distribution	../.eggs/pytest_runner-5.2-py3.6.egg/ptr.py	/^from setuptools import Distribution$/;"	kind:namespace	line:21
+Encoder	../babelfish/model/deep_freeze.py	/^class Encoder(Vol2D):$/;"	kind:class	line:20
+F	../babelfish/caiman.py	/^import torch.nn.functional as F$/;"	kind:namespace	line:3
+F	../babelfish/helpers.py	/^import torch.nn.functional as F$/;"	kind:namespace	line:4
+F	../babelfish/model/deep_freeze.py	/^import torch.nn.functional as F$/;"	kind:namespace	line:4
+F	../babelfish/model/deep_kSVD.py	/^import torch.nn.functional as F$/;"	kind:namespace	line:4
+F	../babelfish/model/deep_multivariate.py	/^import torch.nn.functional as F$/;"	kind:namespace	line:4
+F	../babelfish/model/deep_skip.py	/^import torch.nn.functional as F$/;"	kind:namespace	line:4
+F	../babelfish/plot.py	/^import torch.nn.functional as F$/;"	kind:namespace	line:3
+F	../babelfish/volume.py	/^import torch.nn.functional as F$/;"	kind:namespace	line:3
+F	../scripts/main.py	/^import torch.nn.functional as F$/;"	kind:namespace	line:38
+FD_CODE_PATH	../scripts/main.py	/^FD_CODE_PATH = os.path.expanduser('~\/projects\/fish_despair_notebooks\/src\/')$/;"	kind:variable	line:73
+FT_CODE_PATH	../scripts/main.py	/^FT_CODE_PATH = os.path.expanduser('~\/projects\/fishTrax\/code\/analysis\/')$/;"	kind:variable	line:72
+FishDistanceData	../babelfish/plot.py	/^class FishDistanceData(Dataset):$/;"	kind:class	line:76
+LF_CODE_PATH	../scripts/main.py	/^LF_CODE_PATH = os.path.expanduser('~\/projects\/LFAnalyze\/code')$/;"	kind:variable	line:71
+MSEbyDist	../babelfish/plot.py	/^def MSEbyDist(imaging, maxdist=10, batch_size=256):$/;"	kind:function	line:88
+MSEbyDist	../scripts/main.py	/^from babelfish.plot import interpret, plot_model_vs_real, makePredVideo, MSEbyDist$/;"	kind:namespace	line:87
+Model	../scripts/main.py	/^    Model = DeepFreeze$/;"	kind:variable	line:27
+Model	../scripts/main.py	/^    Model = DeepSkip$/;"	kind:variable	line:21
+Model	../scripts/main.py	/^    Model = Deep_KSVD$/;"	kind:variable	line:24
+Model	../scripts/skip.py	/^Model = DeepSkip$/;"	kind:variable	line:2
+MotionCorrect	../scripts/motion_correction.py	/^from caiman.motion_correction import MotionCorrect, tile_and_correct, motion_correction_piecewise$/;"	kind:namespace	line:38
+Parallel	../babelfish/caiman.py	/^from joblib import Parallel, delayed$/;"	kind:namespace	line:24
+Parallel	../babelfish/helpers.py	/^from joblib import Parallel, delayed$/;"	kind:namespace	line:25
+Parallel	../scripts/main.py	/^from joblib import Parallel, delayed$/;"	kind:namespace	line:59
+Predictor	../babelfish/model/deep_freeze.py	/^class Predictor(Vol2D):$/;"	kind:class	line:69
+PyTest	../.eggs/pytest_runner-4.4-py3.7.egg/ptr.py	/^class PyTest(orig.test):$/;"	kind:class	line:75
+PyTest	../.eggs/pytest_runner-5.2-py3.6.egg/ptr.py	/^class PyTest(orig.test):$/;"	kind:class	line:87
+ResNet	../babelfish/model/deep_freeze.py	/^from ..resnet import ResNet, BasicBlock$/;"	kind:namespace	line:6
+ResNet	../babelfish/model/deep_kSVD.py	/^from ..resnet import ResNet, BasicBlock$/;"	kind:namespace	line:6
+ResNet	../babelfish/model/deep_multivariate.py	/^from ..resnet import ResNet, BasicBlock$/;"	kind:namespace	line:6
+ResNet	../babelfish/model/deep_skip.py	/^from ..resnet import ResNet, BasicBlock$/;"	kind:namespace	line:6
+ResNet	../babelfish/resnet.py	/^class ResNet(nn.Module):$/;"	kind:class	line:44
+Resize	../babelfish/caiman.py	/^from torchvision.transforms import Resize$/;"	kind:namespace	line:22
+Resize	../babelfish/helpers.py	/^from torchvision.transforms import Resize$/;"	kind:namespace	line:23
+Resize	../scripts/main.py	/^from torchvision.transforms import Resize$/;"	kind:namespace	line:57
+SuperResBlock	../babelfish/model/deep_kSVD.py	/^from ..super_res import SuperResBlock$/;"	kind:namespace	line:7
+SuperResBlock	../babelfish/super_res.py	/^class SuperResBlock(Vol2D):$/;"	kind:class	line:5
+SuperResSkip	../babelfish/model/deep_freeze.py	/^from ..super_res import SuperResSkip$/;"	kind:namespace	line:7
+SuperResSkip	../babelfish/model/deep_multivariate.py	/^from ..super_res import SuperResSkip$/;"	kind:namespace	line:7
+SuperResSkip	../babelfish/model/deep_skip.py	/^from ..super_res import SuperResSkip$/;"	kind:namespace	line:7
+SuperResSkip	../babelfish/super_res.py	/^class SuperResSkip(Vol2D):$/;"	kind:class	line:49
+T	../babelfish/caiman.py	/^import torch as T$/;"	kind:namespace	line:1
+T	../babelfish/data.py	/^import torch as T$/;"	kind:namespace	line:3
+T	../babelfish/half_precision.py	/^import torch as T$/;"	kind:namespace	line:2
+T	../babelfish/helpers.py	/^import torch as T$/;"	kind:namespace	line:2
+T	../babelfish/model/deep_freeze.py	/^import torch as T$/;"	kind:namespace	line:2
+T	../babelfish/model/deep_kSVD.py	/^import torch as T$/;"	kind:namespace	line:2
+T	../babelfish/model/deep_multivariate.py	/^import torch as T$/;"	kind:namespace	line:2
+T	../babelfish/model/deep_skip.py	/^import torch as T$/;"	kind:namespace	line:2
+T	../babelfish/plot.py	/^import torch as T$/;"	kind:namespace	line:1
+T	../babelfish/resnet.py	/^import torch as T$/;"	kind:namespace	line:1
+T	../babelfish/stats.py	/^import torch as T$/;"	kind:namespace	line:1
+T	../babelfish/super_res.py	/^import torch as T$/;"	kind:namespace	line:1
+T	../babelfish/volume.py	/^import torch as T$/;"	kind:namespace	line:1
+T	../scripts/main.py	/^import torch as T$/;"	kind:namespace	line:36
+TiffFile	../scripts/motion_correction.py	/^from skimage.external.tifffile import TiffFile$/;"	kind:namespace	line:15
+Vol2D	../babelfish/model/deep_freeze.py	/^from ..volume import Vol2D$/;"	kind:namespace	line:5
+Vol2D	../babelfish/model/deep_kSVD.py	/^from ..volume import Vol2D$/;"	kind:namespace	line:5
+Vol2D	../babelfish/model/deep_multivariate.py	/^from ..volume import Vol2D$/;"	kind:namespace	line:5
+Vol2D	../babelfish/model/deep_skip.py	/^from ..volume import Vol2D$/;"	kind:namespace	line:5
+Vol2D	../babelfish/super_res.py	/^from .volume import Vol2D$/;"	kind:namespace	line:3
+Vol2D	../babelfish/volume.py	/^class Vol2D(nn.Module):$/;"	kind:class	line:5
+ZebraFishData	../babelfish/data.py	/^class ZebraFishData(Dataset):$/;"	kind:class	line:6
+ZebraFishData	../scripts/main.py	/^from babelfish.data import ZebraFishData$/;"	kind:namespace	line:89
+ZebraFishDataCaiman	../babelfish/data.py	/^class ZebraFishDataCaiman(Dataset):$/;"	kind:class	line:92
+ZebraFishDataRNA	../babelfish/data.py	/^class ZebraFishDataRNA(Dataset):$/;"	kind:class	line:48
+__all__	../babelfish/__init__.py	/^__all__ = [ basename(f)[:-3] for f in modules if isfile(f) and not f.endswith('__init__.py')]$/;"	kind:variable	line:4
+__getitem__	../babelfish/data.py	/^    def __getitem__(self, i):$/;"	kind:member	line:115
+__getitem__	../babelfish/data.py	/^    def __getitem__(self, i):$/;"	kind:member	line:25
+__getitem__	../babelfish/data.py	/^    def __getitem__(self, i):$/;"	kind:member	line:68
+__getitem__	../babelfish/plot.py	/^    def __getitem__(self, idx):$/;"	kind:member	line:85
+__init__	../babelfish/data.py	/^    def __init__(self, denoised_imaging, raw_imaging, structural, shocks, tail_movements,$/;"	kind:member	line:95
+__init__	../babelfish/data.py	/^    def __init__(self, imaging, shocks, tail_movements,$/;"	kind:member	line:8
+__init__	../babelfish/data.py	/^    def __init__(self, imaging, structural, shocks, tail_movements,$/;"	kind:member	line:50
+__init__	../babelfish/half_precision.py	/^    def __init__(self):$/;"	kind:member	line:12
+__init__	../babelfish/model/deep_freeze.py	/^    def __init__(self, nZ=11, H=232, W=512, nEmbedding=20, prev_frames=1, next_frames=1,$/;"	kind:member	line:135
+__init__	../babelfish/model/deep_freeze.py	/^    def __init__(self, nZ=11, H=232, W=512, nEmbedding=20, prev_frames=1, next_frames=1,$/;"	kind:member	line:21
+__init__	../babelfish/model/deep_freeze.py	/^    def __init__(self, nZ=11, H=232, W=512, nEmbedding=20, prev_frames=1, next_frames=1,$/;"	kind:member	line:70
+__init__	../babelfish/model/deep_freeze.py	/^    def __init__(self, nZ=11, H=232, W=512, nEmbedding=20, prev_frames=1, next_frames=1,$/;"	kind:member	line:86
+__init__	../babelfish/model/deep_kSVD.py	/^    def __init__(self, nZ=11, H=232, W=512, nEmbedding=20, prev_frames=1,$/;"	kind:member	line:14
+__init__	../babelfish/model/deep_multivariate.py	/^    def __init__(self, nZ=11, H=232, W=512, nEmbedding=20, prev_frames=1, next_frames=1,$/;"	kind:member	line:15
+__init__	../babelfish/model/deep_skip.py	/^    def __init__(self, nZ=11, H=232, W=512, nEmbedding=20, prev_frames=1, next_frames=1,$/;"	kind:member	line:15
+__init__	../babelfish/plot.py	/^    def __init__(self, imaging, distance):$/;"	kind:member	line:77
+__init__	../babelfish/resnet.py	/^    def __init__(self, block, layers, prev_frames=1):$/;"	kind:member	line:46
+__init__	../babelfish/resnet.py	/^    def __init__(self, inplanes, planes, stride=1, downsample=None):$/;"	kind:member	line:15
+__init__	../babelfish/super_res.py	/^    def __init__(self, upscale_factor, in_channels=1, tensor=T.cuda.FloatTensor, out_channels=1):$/;"	kind:member	line:53
+__init__	../babelfish/super_res.py	/^    def __init__(self, upscale_factor, in_channels=1, tensor=T.cuda.FloatTensor, out_channels=1):$/;"	kind:member	line:9
+__init__	../babelfish/volume.py	/^    def __init__(self, tensor=T.cuda.FloatTensor):$/;"	kind:member	line:7
+__init__.py	../babelfish/__init__.py	1;"	kind:file	line:1
+__len__	../babelfish/data.py	/^    def __len__(self):$/;"	kind:member	line:109
+__len__	../babelfish/data.py	/^    def __len__(self):$/;"	kind:member	line:19
+__len__	../babelfish/data.py	/^    def __len__(self):$/;"	kind:member	line:62
+__len__	../babelfish/plot.py	/^    def __len__(self):$/;"	kind:member	line:82
+_argv	../.eggs/pytest_runner-4.4-py3.7.egg/ptr.py	/^	def _argv(self):$/;"	kind:member	line:193
+_argv	../.eggs/pytest_runner-5.2-py3.6.egg/ptr.py	/^    def _argv(self):$/;"	kind:member	line:212
+_contextlib	../.eggs/pytest_runner-4.4-py3.7.egg/ptr.py	/^import contextlib as _contextlib$/;"	kind:namespace	line:7
+_contextlib	../.eggs/pytest_runner-5.2-py3.6.egg/ptr.py	/^import contextlib as _contextlib$/;"	kind:namespace	line:7
+_initialize_weights	../babelfish/model/deep_kSVD.py	/^    def _initialize_weights(self):$/;"	kind:member	line:58
+_initialize_weights	../babelfish/model/deep_multivariate.py	/^    def _initialize_weights(self):$/;"	kind:member	line:65
+_initialize_weights	../babelfish/model/deep_skip.py	/^    def _initialize_weights(self):$/;"	kind:member	line:64
+_itertools	../.eggs/pytest_runner-4.4-py3.7.egg/ptr.py	/^import itertools as _itertools$/;"	kind:namespace	line:10
+_itertools	../.eggs/pytest_runner-5.2-py3.6.egg/ptr.py	/^import itertools as _itertools$/;"	kind:namespace	line:10
+_make_layer	../babelfish/resnet.py	/^    def _make_layer(self, block, planes, blocks, stride=1):$/;"	kind:member	line:69
+_operator	../.eggs/pytest_runner-4.4-py3.7.egg/ptr.py	/^import operator as _operator$/;"	kind:namespace	line:9
+_operator	../.eggs/pytest_runner-5.2-py3.6.egg/ptr.py	/^import operator as _operator$/;"	kind:namespace	line:9
+_os	../.eggs/pytest_runner-4.4-py3.7.egg/ptr.py	/^import os as _os$/;"	kind:namespace	line:5
+_os	../.eggs/pytest_runner-5.2-py3.6.egg/ptr.py	/^import os as _os$/;"	kind:namespace	line:5
+_save_argv	../.eggs/pytest_runner-4.4-py3.7.egg/ptr.py	/^def _save_argv(repl=None):$/;"	kind:function	line:25
+_save_argv	../.eggs/pytest_runner-5.2-py3.6.egg/ptr.py	/^def _save_argv(repl=None):$/;"	kind:function	line:25
+_shlex	../.eggs/pytest_runner-4.4-py3.7.egg/ptr.py	/^import shlex as _shlex$/;"	kind:namespace	line:6
+_shlex	../.eggs/pytest_runner-5.2-py3.6.egg/ptr.py	/^import shlex as _shlex$/;"	kind:namespace	line:6
+_sys	../.eggs/pytest_runner-4.4-py3.7.egg/ptr.py	/^import sys as _sys$/;"	kind:namespace	line:8
+_sys	../.eggs/pytest_runner-5.2-py3.6.egg/ptr.py	/^import sys as _sys$/;"	kind:namespace	line:8
+_warn_old_setuptools	../.eggs/pytest_runner-4.4-py3.7.egg/ptr.py	/^	def _warn_old_setuptools():$/;"	kind:member	line:158
+_warn_old_setuptools	../.eggs/pytest_runner-5.2-py3.6.egg/ptr.py	/^    def _warn_old_setuptools():$/;"	kind:member	line:178
+_warnings	../.eggs/pytest_runner-4.4-py3.7.egg/ptr.py	/^import warnings as _warnings$/;"	kind:namespace	line:11
+_warnings	../.eggs/pytest_runner-5.2-py3.6.egg/ptr.py	/^import warnings as _warnings$/;"	kind:namespace	line:11
+all_data	../scripts/main.py	/^all_data = ZebraFishData(imaging,shocks,tail_movements,None,$/;"	kind:variable	line:164
+all_data	../scripts/main.py	/^all_data = p2putils.get_all_datasets(tmp_dir=tmp_dir)$/;"	kind:variable	line:81
+allow_hosts	../.eggs/pytest_runner-4.4-py3.7.egg/ptr.py	/^	allow_hosts = None$/;"	kind:variable	line:37
+allow_hosts	../.eggs/pytest_runner-5.2-py3.6.egg/ptr.py	/^    allow_hosts = None$/;"	kind:variable	line:37
+argv	../scripts/preprocessing/ome2nrrd	/^from sys import argv$/;"	kind:namespace	line:6
+author	../setup.py	/^      author='Tyler Benster',$/;"	kind:variable	line:7
+author_email	../setup.py	/^      author_email='github@tylerbenster.com',$/;"	kind:variable	line:8
+babelfish	../test/test_babelfish.py	/^import babelfish$/;"	kind:namespace	line:1
+basename	../babelfish/__init__.py	/^from os.path import dirname, basename, isfile$/;"	kind:namespace	line:1
+batch_size	../scripts/main.py	/^batch_size = 32$/;"	kind:variable	line:115
+border_nan	../scripts/motion_correction.py	/^border_nan = 'copy'  # replicate values along the boundary (if True, fill in with NaN)$/;"	kind:variable	line:68
+caiman.py	../babelfish/caiman.py	1;"	kind:file	line:1
+caiman_loss	../babelfish/caiman.py	/^def caiman_loss(pred, spatial, frame, bg, mask):$/;"	kind:function	line:44
+caiman_px_to_dl_px	../babelfish/caiman.py	/^def caiman_px_to_dl_px(image, corners):$/;"	kind:function	line:35
+caiman_px_to_dl_px	../babelfish/helpers.py	/^def caiman_px_to_dl_px(image, corners):$/;"	kind:function	line:292
+caiman_vec_to_2D	../babelfish/caiman.py	/^def caiman_vec_to_2D(x, H, W):$/;"	kind:function	line:32
+caiman_vec_to_2D	../babelfish/helpers.py	/^def caiman_vec_to_2D(x, H, W):$/;"	kind:function	line:289
+chunk_size_for_memory_quota	../babelfish/helpers.py	/^def chunk_size_for_memory_quota(ndarray:np.ndarray, mem_quota:float=16.0):$/;"	kind:function	line:301
+classifiers	../setup.py	/^      classifiers=[$/;"	kind:variable	line:12
+cm	../scripts/motion_correction.py	/^import caiman as cm$/;"	kind:namespace	line:37
+cnmf	../scripts/main.py	/^cnmf=False$/;"	kind:variable	line:102
+command	../.eggs/pytest_runner-4.4-py3.7.egg/ptr.py	/^import setuptools.command.test as orig$/;"	kind:namespace	line:20
+command	../.eggs/pytest_runner-5.2-py3.6.egg/ptr.py	/^import setuptools.command.test as orig$/;"	kind:namespace	line:20
+conv3x3	../babelfish/resnet.py	/^def conv3x3(in_planes, out_planes, stride=1):$/;"	kind:function	line:6
+conv_model	../scripts/main.py	/^    conv_model = apex.fp16_utils.network_to_half(conv_model)$/;"	kind:variable	line:191
+conv_model	../scripts/main.py	/^    conv_model = nn.DataParallel(conv_model)$/;"	kind:variable	line:193
+conv_model	../scripts/main.py	/^conv_model = Model(nZ,H,W,nEmbedding,prev_frames,next_frames, tensor=tensor)$/;"	kind:variable	line:187
+crop	../babelfish/volume.py	/^    def crop(self, x):$/;"	kind:member	line:44
+crop_image	../babelfish/helpers.py	/^def crop_image(image, H, W):$/;"	kind:function	line:158
+cuda	../scripts/main.py	/^cuda=True$/;"	kind:variable	line:100
+cv2	../babelfish/caiman.py	/^import cv2$/;"	kind:namespace	line:25
+cv2	../babelfish/helpers.py	/^import cv2$/;"	kind:namespace	line:26
+cv2	../scripts/main.py	/^import cv2$/;"	kind:namespace	line:60
+cv2	../scripts/motion_correction.py	/^import cv2$/;"	kind:namespace	line:7
+data.py	../babelfish/data.py	1;"	kind:file	line:1
+datetime	../babelfish/caiman.py	/^import os, sys, datetime$/;"	kind:namespace	line:28
+datetime	../babelfish/helpers.py	/^import os, sys, datetime$/;"	kind:namespace	line:29
+datetime	../scripts/main.py	/^import datetime$/;"	kind:namespace	line:4
+datetime	../scripts/main.py	/^import os, sys, datetime$/;"	kind:namespace	line:69
+decode	../babelfish/model/deep_kSVD.py	/^    def decode(self, x):$/;"	kind:member	line:78
+decode	../babelfish/model/deep_multivariate.py	/^    def decode(self, x, layer_output):$/;"	kind:member	line:107
+decode	../babelfish/model/deep_skip.py	/^    def decode(self, x, layer_output):$/;"	kind:member	line:104
+deep_freeze.py	../babelfish/model/deep_freeze.py	1;"	kind:file	line:1
+deep_kSVD.py	../babelfish/model/deep_kSVD.py	1;"	kind:file	line:1
+deep_multivariate.py	../babelfish/model/deep_multivariate.py	1;"	kind:file	line:1
+deep_skip.py	../babelfish/model/deep_skip.py	1;"	kind:file	line:1
+deep_skip_predict	../babelfish/model/deep_multivariate.py	/^def deep_skip_predict(model, batch, mask, plane):$/;"	kind:function	line:249
+deep_skip_predict	../babelfish/model/deep_skip.py	/^def deep_skip_predict(model, batch, mask, plane):$/;"	kind:function	line:246
+delayed	../babelfish/caiman.py	/^from joblib import Parallel, delayed$/;"	kind:namespace	line:24
+delayed	../babelfish/helpers.py	/^from joblib import Parallel, delayed$/;"	kind:namespace	line:25
+delayed	../scripts/main.py	/^from joblib import Parallel, delayed$/;"	kind:namespace	line:59
+denoise	../babelfish/model/deep_freeze.py	/^    def denoise(self, x, shock):$/;"	kind:member	line:170
+description	../setup.py	/^      description='I can speak fish!',$/;"	kind:variable	line:5
+dill	../babelfish/caiman.py	/^import dill$/;"	kind:namespace	line:23
+dill	../babelfish/helpers.py	/^import dill$/;"	kind:namespace	line:24
+dill	../scripts/main.py	/^import dill$/;"	kind:namespace	line:58
+dirname	../babelfish/__init__.py	/^from os.path import dirname, basename, isfile$/;"	kind:namespace	line:1
+distance	../babelfish/caiman.py	/^from scipy.spatial import distance$/;"	kind:namespace	line:20
+distance	../babelfish/helpers.py	/^from scipy.spatial import distance$/;"	kind:namespace	line:21
+distance	../scripts/main.py	/^from scipy.spatial import distance$/;"	kind:namespace	line:55
+division	../babelfish/data.py	/^from __future__ import print_function, division$/;"	kind:namespace	line:1
+division	../babelfish/half_precision.py	/^from __future__ import print_function, division$/;"	kind:namespace	line:1
+division	../babelfish/helpers.py	/^from __future__ import print_function, division$/;"	kind:namespace	line:1
+division	../babelfish/misc.py	/^from __future__ import print_function, division$/;"	kind:namespace	line:1
+division	../babelfish/model/deep_freeze.py	/^from __future__ import print_function, division$/;"	kind:namespace	line:1
+division	../babelfish/model/deep_kSVD.py	/^from __future__ import print_function, division$/;"	kind:namespace	line:1
+division	../babelfish/model/deep_multivariate.py	/^from __future__ import print_function, division$/;"	kind:namespace	line:1
+division	../babelfish/model/deep_skip.py	/^from __future__ import print_function, division$/;"	kind:namespace	line:1
+division	../scripts/main.py	/^from __future__ import print_function, division$/;"	kind:namespace	line:1
+download_demo	../scripts/motion_correction.py	/^from caiman.utils.utils import download_demo$/;"	kind:namespace	line:39
+easy_install	../.eggs/pytest_runner-4.4-py3.7.egg/ptr.py	/^		from setuptools.command.easy_install import easy_install$/;"	kind:namespace	line:43
+easy_install	../.eggs/pytest_runner-5.2-py3.6.egg/ptr.py	/^        from setuptools.command.easy_install import easy_install$/;"	kind:namespace	line:43
+encode	../babelfish/model/deep_kSVD.py	/^    def encode(self, x):$/;"	kind:member	line:69
+encode	../babelfish/model/deep_multivariate.py	/^    def encode(self, x):$/;"	kind:member	line:79
+encode	../babelfish/model/deep_skip.py	/^    def encode(self, x):$/;"	kind:member	line:77
+ensure_setuptools_version	../.eggs/pytest_runner-4.4-py3.7.egg/ptr.py	/^	def ensure_setuptools_version():$/;"	kind:member	line:100
+ensure_setuptools_version	../.eggs/pytest_runner-5.2-py3.6.egg/ptr.py	/^    def ensure_setuptools_version():$/;"	kind:member	line:122
+expansion	../babelfish/resnet.py	/^    expansion = 1$/;"	kind:variable	line:13
+ext	../scripts/preprocessing/ome2nrrd	/^    ext = ext + ext2$/;"	kind:variable	line:21
+f	../scripts/main.py	/^f = all_data[fishIdx[fidx][0]][fishIdx[fidx][1]]$/;"	kind:variable	line:118
+fetch_build_egg	../.eggs/pytest_runner-4.4-py3.7.egg/ptr.py	/^	def fetch_build_egg(self, req):$/;"	kind:member	line:40
+fetch_build_egg	../.eggs/pytest_runner-5.2-py3.6.egg/ptr.py	/^    def fetch_build_egg(self, req):$/;"	kind:member	line:40
+fidx	../scripts/main.py	/^fidx = indicator$/;"	kind:variable	line:34
+files	../scripts/motion_correction.py	/^files = np.array(list(filter(lambda x: x[-3:]=="tif", glob(in_folder+"\/*"))))$/;"	kind:variable	line:50
+files	../scripts/preprocessing/ome2nrrd	/^files = glob(folder + "*.ome.btf") + glob(folder + "*.ome.tif")$/;"	kind:variable	line:14
+finalize_options	../.eggs/pytest_runner-4.4-py3.7.egg/ptr.py	/^	def finalize_options(self):$/;"	kind:member	line:110
+finalize_options	../.eggs/pytest_runner-5.2-py3.6.egg/ptr.py	/^    def finalize_options(self):$/;"	kind:member	line:132
+find_packages	../setup.py	/^from setuptools import setup, find_packages$/;"	kind:namespace	line:1
+fishIdx	../scripts/main.py	/^fishIdx = [("e", 2),  ("e", 5), ("c", 1),  ("c", 6),  ("enp", 1), ("enp", 5)]$/;"	kind:variable	line:6
+fishIdx	../scripts/main.py	/^fishIdx = [("e", 2),  ("e", 5), ("c", 1),  ("c", 6),  ("enp", 1), ("enp", 5)]$/;"	kind:variable	line:93
+fishname	../scripts/motion_correction.py	/^fishname = re.compile("(.*)_.*").match(fns[0]).group(1)$/;"	kind:variable	line:54
+fishpath	../scripts/main.py	/^    fishpath = '\/data2\/Data\/MPzfish\/drn_hb\/{}\/{}_small.npz'.format(f.fishid, f.fishid)$/;"	kind:variable	line:136
+fnames	../scripts/motion_correction.py	/^fnames = [files[0]]$/;"	kind:variable	line:58
+fns	../scripts/motion_correction.py	/^fns = list(map(lambda x: os.path.basename(x), files))$/;"	kind:variable	line:53
+folder	../scripts/preprocessing/ome2nrrd	/^folder = argv[1]$/;"	kind:variable	line:13
+forward	../babelfish/half_precision.py	/^    def forward(self, input):$/;"	kind:member	line:15
+forward	../babelfish/model/deep_freeze.py	/^    def forward(self, x):$/;"	kind:member	line:53
+forward	../babelfish/model/deep_freeze.py	/^    def forward(self, x, layer_output):$/;"	kind:member	line:114
+forward	../babelfish/model/deep_freeze.py	/^    def forward(self, x, shock):$/;"	kind:member	line:78
+forward	../babelfish/model/deep_freeze.py	/^    def forward(self, x, x_shock=None, y_shock=None, model="both"):$/;"	kind:member	line:148
+forward	../babelfish/model/deep_kSVD.py	/^    def forward(self, x, shock):$/;"	kind:member	line:96
+forward	../babelfish/model/deep_multivariate.py	/^    def forward(self, x, shock):$/;"	kind:member	line:126
+forward	../babelfish/model/deep_skip.py	/^    def forward(self, x, shock):$/;"	kind:member	line:123
+forward	../babelfish/resnet.py	/^    def forward(self, x):$/;"	kind:member	line:25
+forward	../babelfish/resnet.py	/^    def forward(self, x):$/;"	kind:member	line:86
+forward	../babelfish/super_res.py	/^    def forward(self, x):$/;"	kind:member	line:28
+forward	../babelfish/super_res.py	/^    def forward(self, x, layer_output):$/;"	kind:member	line:72
+frame	../scripts/main.py	/^frame = makePredVideo(conv_model,train_data,name=model_name+'_train')$/;"	kind:variable	line:213
+frame_times	../scripts/main.py	/^frame_times = T.from_numpy(f.frame_st.mean(1).astype(np.float32))$/;"	kind:variable	line:120
+freeze	../babelfish/model/deep_freeze.py	/^    def freeze(self):$/;"	kind:member	line:190
+gc	../babelfish/caiman.py	/^import gc$/;"	kind:namespace	line:15
+gc	../babelfish/helpers.py	/^import gc$/;"	kind:namespace	line:16
+gc	../scripts/main.py	/^import gc$/;"	kind:namespace	line:50
+gen	../scripts/main.py	/^gen = False$/;"	kind:variable	line:98
+gen_imaging	../babelfish/helpers.py	/^def gen_imaging(nT, nZ, H, W, half=False):$/;"	kind:function	line:65
+gen_imaging	../scripts/main.py	/^from babelfish.helpers import get_frames_from_z, get_imaging_from_fish, gen_imaging, resize_volume, resize_batch, read_cnmf, no_overlap_idx, train_valid_test_split, train_test_split, pad_imaging$/;"	kind:namespace	line:84
+get_frames_from_z	../babelfish/helpers.py	/^def get_frames_from_z(z, fish,half=False):$/;"	kind:function	line:41
+get_frames_from_z	../scripts/main.py	/^from babelfish.helpers import get_frames_from_z, get_imaging_from_fish, gen_imaging, resize_volume, resize_batch, read_cnmf, no_overlap_idx, train_valid_test_split, train_test_split, pad_imaging$/;"	kind:namespace	line:84
+get_imaging_from_fish	../babelfish/helpers.py	/^def get_imaging_from_fish(f,n_jobs=8, half=False):$/;"	kind:function	line:54
+get_imaging_from_fish	../scripts/main.py	/^from babelfish.helpers import get_frames_from_z, get_imaging_from_fish, gen_imaging, resize_volume, resize_batch, read_cnmf, no_overlap_idx, train_valid_test_split, train_test_split, pad_imaging$/;"	kind:namespace	line:84
+get_padding	../babelfish/misc.py	/^def get_padding(padding_type, kernel_size):$/;"	kind:function	line:4
+glob	../babelfish/__init__.py	/^import glob$/;"	kind:namespace	line:2
+glob	../scripts/motion_correction.py	/^from glob import glob$/;"	kind:namespace	line:8
+glob	../scripts/preprocessing/ome2nrrd	/^from glob import glob$/;"	kind:namespace	line:7
+gpu_idx	../scripts/main.py	/^    gpu_idx = str(1)$/;"	kind:variable	line:12
+gridspec	../babelfish/caiman.py	/^import matplotlib.gridspec as gridspec$/;"	kind:namespace	line:12
+gridspec	../babelfish/helpers.py	/^import matplotlib.gridspec as gridspec$/;"	kind:namespace	line:13
+gridspec	../scripts/main.py	/^import matplotlib.gridspec as gridspec$/;"	kind:namespace	line:47
+half	../scripts/main.py	/^half=False$/;"	kind:variable	line:104
+half	../scripts/main.py	/^half=True$/;"	kind:variable	line:103
+half_precision.py	../babelfish/half_precision.py	1;"	kind:file	line:1
+helpers.py	../babelfish/helpers.py	1;"	kind:file	line:1
+hierarchy	../babelfish/caiman.py	/^from scipy.cluster import hierarchy$/;"	kind:namespace	line:21
+hierarchy	../babelfish/helpers.py	/^from scipy.cluster import hierarchy$/;"	kind:namespace	line:22
+hierarchy	../scripts/main.py	/^from scipy.cluster import hierarchy$/;"	kind:namespace	line:56
+imaging	../scripts/main.py	/^        imaging = get_imaging_from_fish(f)$/;"	kind:variable	line:140
+imaging	../scripts/main.py	/^        imaging = np.load(fishpath)['fish']$/;"	kind:variable	line:138
+imaging	../scripts/main.py	/^        imaging = resize_batch(imaging,0.5,0.5)$/;"	kind:variable	line:142
+imaging	../scripts/main.py	/^    imaging = gen_imaging(32,11,232,512)$/;"	kind:variable	line:130
+imaging	../scripts/main.py	/^    imaging = np.load('\/home\/ubuntu\/f01555_cnmf_small.npz')['fish']$/;"	kind:variable	line:133
+imaging	../scripts/main.py	/^imaging = pad_imaging(imaging, 128, 256)$/;"	kind:variable	line:146
+in_folder	../scripts/motion_correction.py	/^in_folder = "\/mnt\/fs3\/tyler\/20181127\/ome_test\/"$/;"	kind:variable	line:46
+index_url	../.eggs/pytest_runner-4.4-py3.7.egg/ptr.py	/^	index_url = None$/;"	kind:variable	line:38
+index_url	../.eggs/pytest_runner-5.2-py3.6.egg/ptr.py	/^    index_url = None$/;"	kind:variable	line:38
+indicator	../scripts/main.py	/^    indicator = 0$/;"	kind:variable	line:11
+indicator	../scripts/main.py	/^    indicator = int(sys.argv[1])$/;"	kind:variable	line:16
+initialize_options	../.eggs/pytest_runner-4.4-py3.7.egg/ptr.py	/^	def initialize_options(self):$/;"	kind:member	line:92
+initialize_options	../.eggs/pytest_runner-5.2-py3.6.egg/ptr.py	/^    def initialize_options(self):$/;"	kind:member	line:114
+initialize_weights	../babelfish/super_res.py	/^    def initialize_weights(self):$/;"	kind:member	line:36
+initialize_weights	../babelfish/super_res.py	/^    def initialize_weights(self):$/;"	kind:member	line:89
+install_dists	../.eggs/pytest_runner-4.4-py3.7.egg/ptr.py	/^	def install_dists(self, dist):$/;"	kind:member	line:126
+install_dists	../.eggs/pytest_runner-5.2-py3.6.egg/ptr.py	/^    def install_dists(self, dist):$/;"	kind:member	line:148
+install_extra_dists	../.eggs/pytest_runner-4.4-py3.7.egg/ptr.py	/^	def install_extra_dists(self, dist):$/;"	kind:member	line:135
+install_extra_dists	../.eggs/pytest_runner-5.2-py3.6.egg/ptr.py	/^    def install_extra_dists(self, dist):$/;"	kind:member	line:156
+interpret	../babelfish/plot.py	/^def interpret(model,prev_vol, next_vol, nEmbedding, scale=1):$/;"	kind:function	line:45
+interpret	../scripts/main.py	/^from babelfish.plot import interpret, plot_model_vs_real, makePredVideo, MSEbyDist$/;"	kind:namespace	line:87
+isfile	../babelfish/__init__.py	/^from os.path import dirname, basename, isfile$/;"	kind:namespace	line:1
+itertools	../babelfish/caiman.py	/^import itertools$/;"	kind:namespace	line:29
+itertools	../babelfish/helpers.py	/^import itertools$/;"	kind:namespace	line:30
+itertools	../babelfish/stats.py	/^import itertools$/;"	kind:namespace	line:5
+itertools	../scripts/main.py	/^import itertools$/;"	kind:namespace	line:70
+keywords	../setup.py	/^      keywords='neuroscience 2P',$/;"	kind:variable	line:30
+kl_lambda	../scripts/main.py	/^kl_lambda = 5e-4$/;"	kind:variable	line:109
+level	../scripts/motion_correction.py	/^                    level=logging.DEBUG)$/;"	kind:variable	line:35
+linalg	../babelfish/caiman.py	/^import scipy.linalg$/;"	kind:namespace	line:7
+linalg	../babelfish/helpers.py	/^import scipy.linalg$/;"	kind:namespace	line:8
+linalg	../scripts/main.py	/^import scipy.linalg$/;"	kind:namespace	line:42
+logging	../scripts/motion_correction.py	/^import logging$/;"	kind:namespace	line:18
+lr	../scripts/main.py	/^lr=1e-3$/;"	kind:variable	line:111
+m_els	../scripts/motion_correction.py	/^m_els = cm.load(mc.fname_tot_els)$/;"	kind:variable	line:87
+m_orig	../scripts/motion_correction.py	/^m_orig = cm.load_movie_chain(fnames)[0:-1]$/;"	kind:variable	line:59
+main.py	../scripts/main.py	1;"	kind:file	line:1
+makePredVideo	../babelfish/plot.py	/^def makePredVideo(model, data, batch_size=32, num_workers=12, name="test"):$/;"	kind:function	line:160
+makePredVideo	../scripts/main.py	/^from babelfish.plot import interpret, plot_model_vs_real, makePredVideo, MSEbyDist$/;"	kind:namespace	line:87
+map	../.eggs/pytest_runner-4.4-py3.7.egg/ptr.py	/^	from future_builtins import map$/;"	kind:namespace	line:15
+map	../.eggs/pytest_runner-5.2-py3.6.egg/ptr.py	/^    from future_builtins import map$/;"	kind:namespace	line:15
+map	../scripts/motion_correction.py	/^from builtins import map$/;"	kind:namespace	line:3
+marker_passes	../.eggs/pytest_runner-4.4-py3.7.egg/ptr.py	/^	def marker_passes(marker):$/;"	kind:member	line:115
+marker_passes	../.eggs/pytest_runner-5.2-py3.6.egg/ptr.py	/^    def marker_passes(marker):$/;"	kind:member	line:137
+math	../babelfish/resnet.py	/^import math$/;"	kind:namespace	line:3
+math	../scripts/main.py	/^import math$/;"	kind:namespace	line:63
+matplotlib	../babelfish/caiman.py	/^import matplotlib.gridspec as gridspec$/;"	kind:namespace	line:12
+matplotlib	../babelfish/caiman.py	/^import matplotlib.pyplot as plt$/;"	kind:namespace	line:10
+matplotlib	../babelfish/helpers.py	/^import matplotlib.gridspec as gridspec$/;"	kind:namespace	line:13
+matplotlib	../babelfish/helpers.py	/^import matplotlib.pyplot as plt$/;"	kind:namespace	line:11
+matplotlib	../babelfish/plot.py	/^import matplotlib.pyplot as plt$/;"	kind:namespace	line:4
+matplotlib	../scripts/main.py	/^import matplotlib.gridspec as gridspec$/;"	kind:namespace	line:47
+matplotlib	../scripts/main.py	/^import matplotlib.pyplot as plt$/;"	kind:namespace	line:45
+matplotlib	../scripts/motion_correction.py	/^import matplotlib.pyplot as plt$/;"	kind:namespace	line:10
+max_deviation_rigid	../scripts/motion_correction.py	/^                  max_deviation_rigid=max_deviation_rigid,$/;"	kind:variable	line:79
+max_deviation_rigid	../scripts/motion_correction.py	/^max_deviation_rigid = 3   # maximum deviation allowed for patch with respect to rigid shifts$/;"	kind:variable	line:65
+max_shifts	../scripts/motion_correction.py	/^max_shifts = (6, 6)  # maximum allowed rigid shift in pixels (view the movie to get a sense of motion)$/;"	kind:variable	line:61
+mc	../scripts/motion_correction.py	/^mc = MotionCorrect(fnames, dview=dview, max_shifts=max_shifts,$/;"	kind:variable	line:77
+misc.py	../babelfish/misc.py	1;"	kind:file	line:1
+mm	../scripts/preprocessing/test.py	/^mm = tifffile.TiffFile(tiff_fn).asarray(out='memmap', maxworkers=1)$/;"	kind:variable	line:6
+model	../scripts/main.py	/^    model = sys.argv[2]$/;"	kind:variable	line:17
+model_zoo	../babelfish/resnet.py	/^import torch.utils.model_zoo as model_zoo$/;"	kind:namespace	line:4
+model_zoo	../scripts/main.py	/^import torch.utils.model_zoo as model_zoo$/;"	kind:namespace	line:64
+modules	../babelfish/__init__.py	/^modules = glob.glob(dirname(__file__)+"\/*.py")$/;"	kind:variable	line:3
+motion_correction.py	../scripts/motion_correction.py	1;"	kind:file	line:1
+motion_correction_piecewise	../scripts/motion_correction.py	/^from caiman.motion_correction import MotionCorrect, tile_and_correct, motion_correction_piecewise$/;"	kind:namespace	line:38
+mpl	../babelfish/caiman.py	/^import matplotlib as mpl$/;"	kind:namespace	line:9
+mpl	../babelfish/helpers.py	/^import matplotlib as mpl$/;"	kind:namespace	line:10
+mpl	../scripts/main.py	/^import matplotlib as mpl$/;"	kind:namespace	line:44
+multi_gpu	../scripts/main.py	/^multi_gpu = True$/;"	kind:variable	line:105
+nEmbedding	../scripts/main.py	/^nEmbedding = 20$/;"	kind:variable	line:113
+nepochs	../scripts/main.py	/^nepochs = 15$/;"	kind:variable	line:112
+network_to_half	../babelfish/half_precision.py	/^def network_to_half(network):$/;"	kind:function	line:35
+network_to_half	../scripts/main.py	/^from babelfish.half_precision import network_to_half$/;"	kind:namespace	line:91
+next_frames	../scripts/main.py	/^next_frames = 5$/;"	kind:variable	line:108
+nn	../babelfish/caiman.py	/^import torch.nn as nn$/;"	kind:namespace	line:4
+nn	../babelfish/caiman.py	/^import torch.nn.functional as F$/;"	kind:namespace	line:3
+nn	../babelfish/half_precision.py	/^import torch.nn as nn$/;"	kind:namespace	line:3
+nn	../babelfish/helpers.py	/^import torch.nn as nn$/;"	kind:namespace	line:5
+nn	../babelfish/helpers.py	/^import torch.nn.functional as F$/;"	kind:namespace	line:4
+nn	../babelfish/model/deep_freeze.py	/^import torch.nn as nn$/;"	kind:namespace	line:3
+nn	../babelfish/model/deep_freeze.py	/^import torch.nn.functional as F$/;"	kind:namespace	line:4
+nn	../babelfish/model/deep_kSVD.py	/^import torch.nn as nn$/;"	kind:namespace	line:3
+nn	../babelfish/model/deep_kSVD.py	/^import torch.nn.functional as F$/;"	kind:namespace	line:4
+nn	../babelfish/model/deep_multivariate.py	/^import torch.nn as nn$/;"	kind:namespace	line:3
+nn	../babelfish/model/deep_multivariate.py	/^import torch.nn.functional as F$/;"	kind:namespace	line:4
+nn	../babelfish/model/deep_skip.py	/^import torch.nn as nn$/;"	kind:namespace	line:3
+nn	../babelfish/model/deep_skip.py	/^import torch.nn.functional as F$/;"	kind:namespace	line:4
+nn	../babelfish/plot.py	/^import torch.nn as nn$/;"	kind:namespace	line:2
+nn	../babelfish/plot.py	/^import torch.nn.functional as F$/;"	kind:namespace	line:3
+nn	../babelfish/resnet.py	/^import torch.nn as nn$/;"	kind:namespace	line:2
+nn	../babelfish/stats.py	/^import torch.nn as nn$/;"	kind:namespace	line:2
+nn	../babelfish/super_res.py	/^import torch.nn as nn$/;"	kind:namespace	line:2
+nn	../babelfish/volume.py	/^import torch.nn as nn$/;"	kind:namespace	line:2
+nn	../babelfish/volume.py	/^import torch.nn.functional as F$/;"	kind:namespace	line:3
+nn	../scripts/main.py	/^import torch.nn as nn$/;"	kind:namespace	line:39
+nn	../scripts/main.py	/^import torch.nn as nn$/;"	kind:namespace	line:62
+nn	../scripts/main.py	/^import torch.nn.functional as F$/;"	kind:namespace	line:38
+no_overlap_idx	../babelfish/helpers.py	/^def no_overlap_idx(startIdx, stopIdx, prev_frames=5, next_frames=5):$/;"	kind:function	line:229
+no_overlap_idx	../scripts/main.py	/^from babelfish.helpers import get_frames_from_z, get_imaging_from_fish, gen_imaging, resize_volume, resize_batch, read_cnmf, no_overlap_idx, train_valid_test_split, train_test_split, pad_imaging$/;"	kind:namespace	line:84
+norm01	../babelfish/helpers.py	/^def norm01(a):$/;"	kind:function	line:214
+now	../scripts/main.py	/^now = datetime.datetime.today().strftime('%y%m%d-%I:%M%p')$/;"	kind:variable	line:205
+np	../babelfish/caiman.py	/^import numpy as np$/;"	kind:namespace	line:11
+np	../babelfish/data.py	/^import numpy as np$/;"	kind:namespace	line:2
+np	../babelfish/helpers.py	/^import numpy as np$/;"	kind:namespace	line:12
+np	../babelfish/misc.py	/^import numpy as np$/;"	kind:namespace	line:2
+np	../babelfish/model/deep_freeze.py	/^import numpy as np$/;"	kind:namespace	line:11
+np	../babelfish/plot.py	/^import numpy as np$/;"	kind:namespace	line:5
+np	../babelfish/stats.py	/^import numpy as np$/;"	kind:namespace	line:3
+np	../scripts/main.py	/^import numpy as np$/;"	kind:namespace	line:46
+np	../scripts/motion_correction.py	/^import numpy as np$/;"	kind:namespace	line:11
+nrrd	../scripts/preprocessing/ome2nrrd	/^import nrrd$/;"	kind:namespace	line:2
+nrrd_file	../scripts/preprocessing/ome2nrrd	/^    nrrd_file = name+".nrrd"$/;"	kind:variable	line:23
+num_frames_split	../scripts/motion_correction.py	/^num_frames_split = 100  # length in frames of each chunk of the movie (to be processed in parallel)$/;"	kind:variable	line:64
+num_workers	../scripts/main.py	/^num_workers = 16$/;"	kind:variable	line:106
+old_div	../scripts/motion_correction.py	/^from past.utils import old_div$/;"	kind:namespace	line:5
+ome2nrrd	../scripts/preprocessing/ome2nrrd	1;"	kind:file	line:1
+orig	../.eggs/pytest_runner-4.4-py3.7.egg/ptr.py	/^import setuptools.command.test as orig$/;"	kind:namespace	line:20
+orig	../.eggs/pytest_runner-5.2-py3.6.egg/ptr.py	/^import setuptools.command.test as orig$/;"	kind:namespace	line:20
+os	../babelfish/caiman.py	/^import os, sys, datetime$/;"	kind:namespace	line:28
+os	../babelfish/helpers.py	/^import os, sys, datetime$/;"	kind:namespace	line:29
+os	../scripts/main.py	/^import os$/;"	kind:namespace	line:2
+os	../scripts/main.py	/^import os, sys, datetime$/;"	kind:namespace	line:69
+os	../scripts/motion_correction.py	/^import os$/;"	kind:namespace	line:12
+os	../scripts/preprocessing/ome2nrrd	/^import os$/;"	kind:namespace	line:4
+overlaps	../scripts/motion_correction.py	/^overlaps = (24, 24)  # overlap between pathes (size of patch strides+overlaps)$/;"	kind:variable	line:63
+p2putils	../scripts/main.py	/^import passivity_2p_imaging_utils as p2putils$/;"	kind:namespace	line:78
+packages	../setup.py	/^      packages=find_packages(),$/;"	kind:variable	line:10
+pad_image	../babelfish/helpers.py	/^def pad_image(image, H, W):$/;"	kind:function	line:131
+pad_imaging	../babelfish/helpers.py	/^def pad_imaging(imaging, H, W):$/;"	kind:function	line:103
+pad_imaging	../scripts/main.py	/^from babelfish.helpers import get_frames_from_z, get_imaging_from_fish, gen_imaging, resize_volume, resize_batch, read_cnmf, no_overlap_idx, train_valid_test_split, train_test_split, pad_imaging$/;"	kind:namespace	line:84
+pad_volume	../babelfish/helpers.py	/^def pad_volume(image, H, W):$/;"	kind:function	line:186
+partial	../babelfish/caiman.py	/^from functools import partial$/;"	kind:namespace	line:8
+partial	../babelfish/helpers.py	/^from functools import partial$/;"	kind:namespace	line:9
+partial	../scripts/main.py	/^from functools import partial$/;"	kind:namespace	line:43
+pd	../babelfish/caiman.py	/^import pandas as pd$/;"	kind:namespace	line:17
+pd	../babelfish/helpers.py	/^import pandas as pd$/;"	kind:namespace	line:18
+pd	../scripts/main.py	/^import pandas as pd$/;"	kind:namespace	line:52
+pkg_resources	../.eggs/pytest_runner-4.4-py3.7.egg/ptr.py	/^import pkg_resources$/;"	kind:namespace	line:19
+pkg_resources	../.eggs/pytest_runner-5.2-py3.6.egg/ptr.py	/^import pkg_resources$/;"	kind:namespace	line:19
+plot.py	../babelfish/plot.py	1;"	kind:file	line:1
+plot_embedding_over_time	../babelfish/plot.py	/^def plot_embedding_over_time(model,data, batch_size=64, num_workers=12):$/;"	kind:function	line:105
+plot_model_vs_real	../babelfish/plot.py	/^def plot_model_vs_real(model,data):$/;"	kind:function	line:11
+plot_model_vs_real	../scripts/main.py	/^from babelfish.plot import interpret, plot_model_vs_real, makePredVideo, MSEbyDist$/;"	kind:namespace	line:87
+plt	../babelfish/caiman.py	/^import matplotlib.pyplot as plt$/;"	kind:namespace	line:10
+plt	../babelfish/helpers.py	/^import matplotlib.pyplot as plt$/;"	kind:namespace	line:11
+plt	../babelfish/plot.py	/^import matplotlib.pyplot as plt$/;"	kind:namespace	line:4
+plt	../scripts/main.py	/^import matplotlib.pyplot as plt$/;"	kind:namespace	line:45
+plt	../scripts/motion_correction.py	/^import matplotlib.pyplot as plt$/;"	kind:namespace	line:10
+predict	../babelfish/model/deep_freeze.py	/^    def predict(self, x, shock):$/;"	kind:member	line:180
+predict	../babelfish/model/deep_multivariate.py	/^    def predict(self, x, shock):$/;"	kind:member	line:95
+predict	../babelfish/model/deep_skip.py	/^    def predict(self, x, shock):$/;"	kind:member	line:92
+predictZero	../babelfish/model/deep_multivariate.py	/^    def predictZero(self, x, shock):$/;"	kind:member	line:101
+predictZero	../babelfish/model/deep_skip.py	/^    def predictZero(self, x, shock):$/;"	kind:member	line:98
+prev_frames	../scripts/main.py	/^prev_frames = 5$/;"	kind:variable	line:107
+print_function	../babelfish/data.py	/^from __future__ import print_function, division$/;"	kind:namespace	line:1
+print_function	../babelfish/half_precision.py	/^from __future__ import print_function, division$/;"	kind:namespace	line:1
+print_function	../babelfish/helpers.py	/^from __future__ import print_function, division$/;"	kind:namespace	line:1
+print_function	../babelfish/misc.py	/^from __future__ import print_function, division$/;"	kind:namespace	line:1
+print_function	../babelfish/model/deep_freeze.py	/^from __future__ import print_function, division$/;"	kind:namespace	line:1
+print_function	../babelfish/model/deep_kSVD.py	/^from __future__ import print_function, division$/;"	kind:namespace	line:1
+print_function	../babelfish/model/deep_multivariate.py	/^from __future__ import print_function, division$/;"	kind:namespace	line:1
+print_function	../babelfish/model/deep_skip.py	/^from __future__ import print_function, division$/;"	kind:namespace	line:1
+print_function	../scripts/main.py	/^from __future__ import print_function, division$/;"	kind:namespace	line:1
+psutil	../scripts/motion_correction.py	/^import psutil$/;"	kind:namespace	line:13
+ptr.py	../.eggs/pytest_runner-4.4-py3.7.egg/ptr.py	1;"	kind:file	line:1
+ptr.py	../.eggs/pytest_runner-5.2-py3.6.egg/ptr.py	1;"	kind:file	line:1
+pw_rigid	../scripts/motion_correction.py	/^pw_rigid = False  # flag for performing rigid or piecewise rigid motion correction$/;"	kind:variable	line:66
+range	../scripts/motion_correction.py	/^from builtins import range$/;"	kind:namespace	line:4
+re	../scripts/motion_correction.py	/^import re$/;"	kind:namespace	line:9
+read_cnmf	../babelfish/helpers.py	/^def read_cnmf(base_filename, nZ=11):$/;"	kind:function	line:221
+read_cnmf	../scripts/main.py	/^from babelfish.helpers import get_frames_from_z, get_imaging_from_fish, gen_imaging, resize_volume, resize_batch, read_cnmf, no_overlap_idx, train_valid_test_split, train_test_split, pad_imaging$/;"	kind:namespace	line:84
+resize_3d	../babelfish/helpers.py	/^def resize_3d(images, fx, fy, interpolation=cv2.INTER_LINEAR, out="ndarray"):$/;"	kind:function	line:73
+resize_4d	../babelfish/helpers.py	/^def resize_4d(images, fx, fy, interpolation=cv2.INTER_LINEAR, out="ndarray",$/;"	kind:function	line:88
+resize_batch	../scripts/main.py	/^from babelfish.helpers import get_frames_from_z, get_imaging_from_fish, gen_imaging, resize_volume, resize_batch, read_cnmf, no_overlap_idx, train_valid_test_split, train_test_split, pad_imaging$/;"	kind:namespace	line:84
+resize_volume	../scripts/main.py	/^from babelfish.helpers import get_frames_from_z, get_imaging_from_fish, gen_imaging, resize_volume, resize_batch, read_cnmf, no_overlap_idx, train_valid_test_split, train_test_split, pad_imaging$/;"	kind:namespace	line:84
+resnet.py	../babelfish/resnet.py	1;"	kind:file	line:1
+resource	../babelfish/caiman.py	/^import resource$/;"	kind:namespace	line:26
+resource	../babelfish/helpers.py	/^import resource$/;"	kind:namespace	line:27
+resource	../scripts/main.py	/^import resource$/;"	kind:namespace	line:61
+run	../.eggs/pytest_runner-4.4-py3.7.egg/ptr.py	/^	def run(self):$/;"	kind:member	line:169
+run	../.eggs/pytest_runner-5.2-py3.6.egg/ptr.py	/^    def run(self):$/;"	kind:member	line:189
+run_tests	../.eggs/pytest_runner-4.4-py3.7.egg/ptr.py	/^	def run_tests(self):$/;"	kind:member	line:196
+run_tests	../.eggs/pytest_runner-5.2-py3.6.egg/ptr.py	/^    def run_tests(self):$/;"	kind:member	line:215
+sampleMSE	../babelfish/stats.py	/^def sampleMSE(model,data, batch_size=96):$/;"	kind:function	line:9
+sampleMSE	../scripts/main.py	/^from babelfish.stats import sampleMSE$/;"	kind:namespace	line:86
+sampleMSE_kSVD	../babelfish/stats.py	/^def sampleMSE_kSVD(model,data, batch_size=96):$/;"	kind:function	line:53
+sample_embedding	../babelfish/model/deep_freeze.py	/^    def sample_embedding(self, mu, logvar):$/;"	kind:member	line:45
+sample_embedding	../babelfish/model/deep_kSVD.py	/^    def sample_embedding(self, mu, logvar):$/;"	kind:member	line:61
+sample_embedding	../babelfish/model/deep_multivariate.py	/^    def sample_embedding(self, mu, logvar):$/;"	kind:member	line:71
+sample_embedding	../babelfish/model/deep_skip.py	/^    def sample_embedding(self, mu, logvar):$/;"	kind:member	line:69
+save_image	../babelfish/caiman.py	/^from torchvision.utils import save_image$/;"	kind:namespace	line:5
+save_image	../babelfish/helpers.py	/^from torchvision.utils import save_image$/;"	kind:namespace	line:6
+save_image	../scripts/main.py	/^from torchvision.utils import save_image$/;"	kind:namespace	line:40
+sb	../babelfish/caiman.py	/^import seaborn as sb$/;"	kind:namespace	line:18
+sb	../babelfish/helpers.py	/^import seaborn as sb$/;"	kind:namespace	line:19
+sb	../scripts/main.py	/^import seaborn as sb$/;"	kind:namespace	line:53
+scale_for_vid	../babelfish/plot.py	/^def scale_for_vid(arr):$/;"	kind:function	line:150
+scale_for_vid	../babelfish/plot.py	/^def scale_for_vid(arr, mymin, mymax):$/;"	kind:function	line:154
+scale_for_vid	../babelfish/plot.py	/^def scale_for_vid(arr, mymin, mymax):$/;"	kind:function	line:157
+scipy	../babelfish/caiman.py	/^import scipy.linalg$/;"	kind:namespace	line:7
+scipy	../babelfish/caiman.py	/^import scipy.sparse as sparse$/;"	kind:namespace	line:13
+scipy	../babelfish/helpers.py	/^import scipy.linalg$/;"	kind:namespace	line:8
+scipy	../babelfish/helpers.py	/^import scipy.sparse as sparse$/;"	kind:namespace	line:14
+scipy	../scripts/main.py	/^import scipy.linalg$/;"	kind:namespace	line:42
+scipy	../scripts/main.py	/^import scipy.sparse as sparse$/;"	kind:namespace	line:48
+scipy	../scripts/motion_correction.py	/^import scipy$/;"	kind:namespace	line:14
+setup	../setup.py	/^from setuptools import setup, find_packages$/;"	kind:namespace	line:1
+setup.py	../setup.py	1;"	kind:file	line:1
+setup_requires	../setup.py	/^      setup_requires=['pytest-runner'],$/;"	kind:variable	line:31
+setuptools	../.eggs/pytest_runner-4.4-py3.7.egg/ptr.py	/^import setuptools.command.test as orig$/;"	kind:namespace	line:20
+setuptools	../.eggs/pytest_runner-5.2-py3.6.egg/ptr.py	/^import setuptools.command.test as orig$/;"	kind:namespace	line:20
+shifts_opencv	../scripts/motion_correction.py	/^shifts_opencv = True  # flag for correcting motion using bicubic interpolation (otherwise FFT interpolation is used)$/;"	kind:variable	line:67
+shocks	../scripts/main.py	/^shocks = T.FloatTensor(frame_times.shape).zero_()$/;"	kind:variable	line:121
+sigmoid_schedule	../babelfish/misc.py	/^def sigmoid_schedule(t,k=5):$/;"	kind:function	line:11
+sigmoid_schedule	../babelfish/model/deep_freeze.py	/^from ..misc import sigmoid_schedule$/;"	kind:namespace	line:9
+sigmoid_schedule	../babelfish/model/deep_multivariate.py	/^from ..misc import sigmoid_schedule$/;"	kind:namespace	line:9
+sigmoid_schedule	../babelfish/model/deep_skip.py	/^from ..misc import sigmoid_schedule$/;"	kind:namespace	line:9
+skip.py	../scripts/skip.py	1;"	kind:file	line:1
+sparse	../babelfish/caiman.py	/^import scipy.sparse as sparse$/;"	kind:namespace	line:13
+sparse	../babelfish/helpers.py	/^import scipy.sparse as sparse$/;"	kind:namespace	line:14
+sparse	../scripts/main.py	/^import scipy.sparse as sparse$/;"	kind:namespace	line:48
+sparse_lambda	../scripts/main.py	/^sparse_lambda=1e-3$/;"	kind:variable	line:110
+stats	../babelfish/caiman.py	/^from scipy import stats$/;"	kind:namespace	line:14
+stats	../babelfish/helpers.py	/^from scipy import stats$/;"	kind:namespace	line:15
+stats	../scripts/main.py	/^from scipy import stats$/;"	kind:namespace	line:49
+stats.py	../babelfish/stats.py	1;"	kind:file	line:1
+str	../scripts/motion_correction.py	/^from builtins import str$/;"	kind:namespace	line:2
+strides	../scripts/motion_correction.py	/^strides =  (48, 48)  # create a new patch every x pixels for pw-rigid correction$/;"	kind:variable	line:62
+super_res.py	../babelfish/super_res.py	1;"	kind:file	line:1
+sys	../babelfish/caiman.py	/^import os, sys, datetime$/;"	kind:namespace	line:28
+sys	../babelfish/helpers.py	/^import os, sys, datetime$/;"	kind:namespace	line:29
+sys	../scripts/main.py	/^import os, sys, datetime$/;"	kind:namespace	line:69
+sys	../scripts/main.py	/^import sys$/;"	kind:namespace	line:3
+sys	../scripts/motion_correction.py	/^import sys$/;"	kind:namespace	line:16
+sys	../scripts/preprocessing/ome2nrrd	/^import sys$/;"	kind:namespace	line:5
+sys	../scripts/preprocessing/test.py	/^import sys$/;"	kind:namespace	line:1
+tail_movements	../scripts/main.py	/^tail_movements = T.FloatTensor(frame_times.shape).zero_()$/;"	kind:variable	line:124
+tensor	../scripts/main.py	/^    tensor = tensorlib.FloatTensor$/;"	kind:variable	line:185
+tensor	../scripts/main.py	/^    tensor = tensorlib.HalfTensor$/;"	kind:variable	line:183
+tensorlib	../scripts/main.py	/^    tensorlib = T.cuda$/;"	kind:variable	line:180
+tensorlib	../scripts/main.py	/^tensorlib = T$/;"	kind:variable	line:178
+test.py	../scripts/preprocessing/test.py	1;"	kind:file	line:1
+test_babelfish.py	../test/test_babelfish.py	1;"	kind:file	line:1
+test_data	../scripts/main.py	/^test_data = ZebraFishData(imaging,shocks,tail_movements,$/;"	kind:variable	line:161
+tests_require	../setup.py	/^      tests_require=['pytest'],$/;"	kind:variable	line:32
+tiff	../scripts/preprocessing/ome2nrrd	/^    tiff = tifffile.imread(file)$/;"	kind:variable	line:22
+tiff_fn	../scripts/preprocessing/test.py	/^tiff_fn  = "\/data\/dlab\/zfish_2p\/20191101_6f\/f2_e1_omr.ome.btf"$/;"	kind:variable	line:4
+tifffile	../scripts/preprocessing/ome2nrrd	/^import tifffile$/;"	kind:namespace	line:3
+tifffile	../scripts/preprocessing/test.py	/^import tifffile$/;"	kind:namespace	line:3
+tile_and_correct	../scripts/motion_correction.py	/^from caiman.motion_correction import MotionCorrect, tile_and_correct, motion_correction_piecewise$/;"	kind:namespace	line:38
+time	../scripts/motion_correction.py	/^import time$/;"	kind:namespace	line:17
+tmp_dir	../scripts/main.py	/^tmp_dir = '\/tmp\/'$/;"	kind:variable	line:80
+tofp16	../babelfish/half_precision.py	/^class tofp16(nn.Module):$/;"	kind:class	line:5
+torch	../babelfish/caiman.py	/^import torch$/;"	kind:namespace	line:2
+torch	../babelfish/caiman.py	/^import torch.nn as nn$/;"	kind:namespace	line:4
+torch	../babelfish/caiman.py	/^import torch.nn.functional as F$/;"	kind:namespace	line:3
+torch	../babelfish/half_precision.py	/^import torch.nn as nn$/;"	kind:namespace	line:3
+torch	../babelfish/helpers.py	/^import torch$/;"	kind:namespace	line:3
+torch	../babelfish/helpers.py	/^import torch.nn as nn$/;"	kind:namespace	line:5
+torch	../babelfish/helpers.py	/^import torch.nn.functional as F$/;"	kind:namespace	line:4
+torch	../babelfish/model/deep_freeze.py	/^import torch.nn as nn$/;"	kind:namespace	line:3
+torch	../babelfish/model/deep_freeze.py	/^import torch.nn.functional as F$/;"	kind:namespace	line:4
+torch	../babelfish/model/deep_kSVD.py	/^import torch.nn as nn$/;"	kind:namespace	line:3
+torch	../babelfish/model/deep_kSVD.py	/^import torch.nn.functional as F$/;"	kind:namespace	line:4
+torch	../babelfish/model/deep_multivariate.py	/^import torch.nn as nn$/;"	kind:namespace	line:3
+torch	../babelfish/model/deep_multivariate.py	/^import torch.nn.functional as F$/;"	kind:namespace	line:4
+torch	../babelfish/model/deep_skip.py	/^import torch.nn as nn$/;"	kind:namespace	line:3
+torch	../babelfish/model/deep_skip.py	/^import torch.nn.functional as F$/;"	kind:namespace	line:4
+torch	../babelfish/plot.py	/^import torch.nn as nn$/;"	kind:namespace	line:2
+torch	../babelfish/plot.py	/^import torch.nn.functional as F$/;"	kind:namespace	line:3
+torch	../babelfish/resnet.py	/^import torch.nn as nn$/;"	kind:namespace	line:2
+torch	../babelfish/resnet.py	/^import torch.utils.model_zoo as model_zoo$/;"	kind:namespace	line:4
+torch	../babelfish/stats.py	/^import torch.nn as nn$/;"	kind:namespace	line:2
+torch	../babelfish/super_res.py	/^import torch.nn as nn$/;"	kind:namespace	line:2
+torch	../babelfish/volume.py	/^import torch.nn as nn$/;"	kind:namespace	line:2
+torch	../babelfish/volume.py	/^import torch.nn.functional as F$/;"	kind:namespace	line:3
+torch	../scripts/main.py	/^import torch$/;"	kind:namespace	line:37
+torch	../scripts/main.py	/^import torch.nn as nn$/;"	kind:namespace	line:39
+torch	../scripts/main.py	/^import torch.nn as nn$/;"	kind:namespace	line:62
+torch	../scripts/main.py	/^import torch.nn.functional as F$/;"	kind:namespace	line:38
+torch	../scripts/main.py	/^import torch.utils.model_zoo as model_zoo$/;"	kind:namespace	line:64
+total_examples	../scripts/main.py	/^total_examples = sum([len(x) for x in tvt_split.values()])$/;"	kind:variable	line:150
+tqdm	../babelfish/caiman.py	/^from tqdm import tqdm$/;"	kind:namespace	line:16
+tqdm	../babelfish/helpers.py	/^from tqdm import tqdm$/;"	kind:namespace	line:17
+tqdm	../babelfish/model/deep_freeze.py	/^from tqdm import tqdm$/;"	kind:namespace	line:10
+tqdm	../babelfish/model/deep_kSVD.py	/^from tqdm import tqdm$/;"	kind:namespace	line:9
+tqdm	../babelfish/model/deep_multivariate.py	/^from tqdm import tqdm$/;"	kind:namespace	line:10
+tqdm	../babelfish/model/deep_skip.py	/^from tqdm import tqdm$/;"	kind:namespace	line:10
+tqdm	../babelfish/stats.py	/^from tqdm import tqdm$/;"	kind:namespace	line:6
+tqdm	../scripts/main.py	/^from tqdm import tqdm$/;"	kind:namespace	line:51
+train	../babelfish/model/deep_freeze.py	/^def train(model,train_data,valid_data, nepochs=10, lr=1e-3, kl_lambda=1, kl_tail=1e2, half=False, cuda=True, batch_size=16, num_workers=8):$/;"	kind:function	line:278
+train	../babelfish/model/deep_kSVD.py	/^def train(model,train_data,valid_data, nepochs=10, lr=1e-3, sparse_lambda=1, tail_lambda=1e2, half=False, cuda=True, batch_size=16, num_workers=8):$/;"	kind:function	line:102
+train	../babelfish/model/deep_multivariate.py	/^def train(model,train_data,valid_data, nepochs=10, lr=1e-3, kl_lambda=1, kl_tail=1e2, half=False, cuda=True, batch_size=16, num_workers=8):$/;"	kind:function	line:145
+train	../babelfish/model/deep_skip.py	/^def train(model,train_data,valid_data, nepochs=10, lr=1e-3, kl_lambda=1, kl_tail=1e2, half=False, cuda=True, batch_size=16, num_workers=8):$/;"	kind:function	line:142
+train	../scripts/main.py	/^    from babelfish.model.deep_freeze import DeepFreeze, train, trainBoth$/;"	kind:namespace	line:26
+train	../scripts/main.py	/^    from babelfish.model.deep_kSVD import Deep_KSVD, train$/;"	kind:namespace	line:23
+train	../scripts/main.py	/^    from babelfish.model.deep_skip import DeepSkip, train$/;"	kind:namespace	line:20
+train	../scripts/main.py	/^    train = trainBoth$/;"	kind:variable	line:28
+train	../scripts/skip.py	/^from babelfish.model.deep_skip import DeepSkip, train$/;"	kind:namespace	line:1
+trainBoth	../babelfish/model/deep_freeze.py	/^def trainBoth(model,train_data,valid_data, nepochs=10, lr=1e-3, kl_lambda=1, kl_tail=1e2, half=False, cuda=True, batch_size=16, num_workers=8):$/;"	kind:function	line:320
+trainBoth	../scripts/main.py	/^    from babelfish.model.deep_freeze import DeepFreeze, train, trainBoth$/;"	kind:namespace	line:26
+train_data	../scripts/main.py	/^train_data = ZebraFishData(imaging,shocks,tail_movements,$/;"	kind:variable	line:155
+train_helper	../babelfish/model/deep_freeze.py	/^def train_helper(model, dataloader, optimizer, nExamples, X_lambda, Y_lambda, validation=False, half=False, verbose=True, cuda=True, kl_lambda=1, kl_tail=1):$/;"	kind:function	line:210
+train_test_split	../babelfish/helpers.py	/^def train_test_split(nIdx, prev_frames=5, next_frames=5, n_per_sample=10, nchunks=3):$/;"	kind:function	line:263
+train_test_split	../scripts/main.py	/^from babelfish.helpers import get_frames_from_z, get_imaging_from_fish, gen_imaging, resize_volume, resize_batch, read_cnmf, no_overlap_idx, train_valid_test_split, train_test_split, pad_imaging$/;"	kind:namespace	line:84
+train_valid_test_split	../babelfish/helpers.py	/^def train_valid_test_split(nIdx, prev_frames=5, next_frames=5, n_per_sample=10, nchunks=3):$/;"	kind:function	line:234
+train_valid_test_split	../scripts/main.py	/^from babelfish.helpers import get_frames_from_z, get_imaging_from_fish, gen_imaging, resize_volume, resize_batch, read_cnmf, no_overlap_idx, train_valid_test_split, train_test_split, pad_imaging$/;"	kind:namespace	line:84
+tvt_split	../scripts/main.py	/^tvt_split = train_test_split(2826, nchunks=20)$/;"	kind:variable	line:149
+unfreeze	../babelfish/model/deep_freeze.py	/^    def unfreeze(self):$/;"	kind:member	line:197
+unit_norm_KL_divergence	../babelfish/model/deep_freeze.py	/^def unit_norm_KL_divergence(mu, logvar):$/;"	kind:function	line:202
+unit_norm_KL_divergence	../babelfish/model/deep_multivariate.py	/^def unit_norm_KL_divergence(mu, logvar):$/;"	kind:function	line:136
+unit_norm_KL_divergence	../babelfish/model/deep_skip.py	/^def unit_norm_KL_divergence(mu, logvar):$/;"	kind:function	line:133
+url	../setup.py	/^      url='https:\/\/github.com\/tbenst\/babelfish',$/;"	kind:variable	line:6
+user_options	../.eggs/pytest_runner-4.4-py3.7.egg/ptr.py	/^	user_options = [$/;"	kind:variable	line:82
+user_options	../.eggs/pytest_runner-5.2-py3.6.egg/ptr.py	/^    user_options = [$/;"	kind:variable	line:94
+utils	../babelfish/resnet.py	/^import torch.utils.model_zoo as model_zoo$/;"	kind:namespace	line:4
+utils	../scripts/main.py	/^import torch.utils.model_zoo as model_zoo$/;"	kind:namespace	line:64
+validation_loss	../babelfish/model/deep_multivariate.py	/^def validation_loss(model,valid_data, kl_lambda=1, kl_tail=1e2, half=False, cuda=True, batch_size=16, num_workers=8):$/;"	kind:function	line:206
+validation_loss	../babelfish/model/deep_skip.py	/^def validation_loss(model,valid_data, kl_lambda=1, kl_tail=1e2, half=False, cuda=True, batch_size=16, num_workers=8):$/;"	kind:function	line:203
+version	../setup.py	/^      version='0.1',$/;"	kind:variable	line:4
+vol_BatchNorm2d	../babelfish/volume.py	/^    def vol_BatchNorm2d(self, x, bn):$/;"	kind:member	line:31
+vol_MaxPool2d	../babelfish/volume.py	/^    def vol_MaxPool2d(self, x, kernel_size):$/;"	kind:member	line:25
+vol_PixelShuffle	../babelfish/volume.py	/^    def vol_PixelShuffle(self, x):$/;"	kind:member	line:11
+vol_conv2d	../babelfish/volume.py	/^    def vol_conv2d(self, x, weight, pad):$/;"	kind:member	line:37
+volume.py	../babelfish/volume.py	1;"	kind:file	line:1
+volume_mse	../babelfish/stats.py	/^from .volume import volume_mse$/;"	kind:namespace	line:7
+volume_mse	../babelfish/volume.py	/^def volume_mse(X, Y):$/;"	kind:function	line:53
+zip	../scripts/motion_correction.py	/^from builtins import zip$/;"	kind:namespace	line:1
+zip_safe	../setup.py	/^      zip_safe=False,$/;"	kind:variable	line:11
+zs	../scripts/motion_correction.py	/^zs = np.array(list(map(lambda x: z_re.match(x).group(1), fns)),dtype=int)$/;"	kind:variable	line:55

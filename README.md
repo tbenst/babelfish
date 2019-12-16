@@ -24,3 +24,13 @@ $ conda list --explicit
 ```
 
 Now copy output to strict_environment
+
+
+## copy nix-cach
+```
+nix copy --to 's3://nix-science?profile=nix-cache&region=us-west-2' nixpkgs.hello 
+```
+
+# TODO
+- use PyTables for recording pipeline DAG per-file?
+- fix environment.yml to use requirements.txt where possible?

@@ -70,20 +70,33 @@ def gen_imaging(nT, nZ, H, W, half=False):
     return np.random.randint(0,3000,[nT,nZ,H,W]).astype(dtype)
 
 
-def resize_volume(images, fx, fy, interpolation=cv2.INTER_LINEAR):
-    im = cv2.resize(images[0], None, fx=fx, fy=fy, interpolation=interpolation)
-    new = np.zeros([images.shape[0],im.shape[0],im.shape[1]]).astype(np.float32)
+def resize_3d(images, fx, fy, interpolation=cv2.INTER_LINEAR, out="ndarray"):
+    # NOTE changed from images.asarray for each cv2.resize call
+    im = cv2.resize((images[0]), None, fx=fx, fy=fy, interpolation=interpolation)
+    if out=="ndarray":
+        new = np.zeros([images.shape[0],im.shape[0],im.shape[1]],
+            dtype=np.float32)
+    elif out=="memmap":
+        new = np.memmap("babelfish_temp_memmap.mmap", np.float32, "w+",
+            (images.shape[0],im.shape[0],im.shape[1]))
     new[0] = im
     for i, img in enumerate(images[1:]):
-        new[i] = cv2.resize(img, None, fx=fx, fy=fy, interpolation=interpolation)
+        new[i] = cv2.resize((img), None, fx=fx, fy=fy, interpolation=interpolation)
     return new
 
-def resize_batch(images, fx, fy, interpolation=cv2.INTER_LINEAR):
-    im = cv2.resize(images[0,0], None, fx=fx, fy=fy, interpolation=interpolation)
-    new = np.zeros([images.shape[0],images.shape[1], im.shape[0],im.shape[1]]).astype(np.float32)
+def resize_4d(images, fx, fy, interpolation=cv2.INTER_LINEAR, out="ndarray",
+        is_tiff=False):
+    im = cv2.resize((images[0,0]), None, fx=fx, fy=fy, interpolation=interpolation)
+    if out=="ndarray":
+        new = np.zeros([images.shape[0],images.shape[1], im.shape[0],im.shape[1]],
+            dtype = np.float32)
+    elif out=="memmap":
+        new = np.memmap("babelfish_temp_memmap.mmap", np.float32, "w+",
+            (images.shape[0],images.shape[1], im.shape[0],im.shape[1]))
     for b, vol in enumerate(images):
         for z, img in enumerate(vol):
-            new[b,z] = cv2.resize(img, None, fx=fx, fy=fy, interpolation=interpolation)
+            new[b,z] = cv2.resize((img), None, fx=fx, fy=fy,
+                interpolation=interpolation)
     return new
 
 def pad_imaging(imaging, H, W):
@@ -283,3 +296,15 @@ def caiman_px_to_dl_px(image, corners):
     resized = cv2.resize(cropped, None, fx=0.5, fy=0.5, interpolation=cv2.INTER_LINEAR)
     padded = pad_image(resized, 256, 256)
     return padded
+
+def chunk_size_for_memory_quota(ndarray:np.ndarray, mem_quota:float=16.0):
+    """Return size (int) for axis=0 slicing
+
+    Arguments:
+        ndarray {np.ndarray} -- 
+        mem_quota {float} -- in GiB
+    """    
+    max_memory = mem_quota * 1024**3 # GiB to bytes
+    size_per_sample = np.product(ndarray.shape[1:]) * ndarray.dtype.itemsize # bytes
+    chunk_size = int(max_memory/size_per_sample)
+    return chunk_size

@@ -9,6 +9,7 @@ tifffile
 opencv-python
 dill
 pytorch
+pytorch-lightning
 joblib
 scikit-video
 seaborn

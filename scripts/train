@@ -1,0 +1,142 @@
+#! /usr/bin/env nix-shell
+#! nix-shell -I nixpkgs=https://github.com/tbenst/nixpkgs/archive/a6d77b1403caaf46f19223eab8638f55927f56e2.tar.gz
+#! nix-shell ../default.nix -i python
+import click, h5py, os, datetime, mlflow, itertools, torch, gc, dill, cv2
+import mlflow.pytorch
+import math, resource
+import babelfish as bf
+import torch as T
+import torch.nn.functional as F
+import torch.nn as nn
+from torchvision.utils import save_image
+from torch.utils.data import DataLoader, Dataset
+import scipy.linalg
+from functools import partial
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import numpy as np
+import matplotlib.gridspec as gridspec
+import scipy.sparse as sparse
+from scipy import stats
+from tqdm import tqdm
+import pandas as pd
+import seaborn as sb
+from pandas import DataFrame
+from scipy.spatial import distance
+from scipy.cluster import hierarchy
+from torchvision.transforms import Resize
+import torch.nn as nn
+from joblib import Parallel, delayed
+import torch.utils.model_zoo as model_zoo
+import pytorch_lightning as pl
+
+
+import babelfish
+from babelfish.stats import sampleMSE
+from babelfish.plot import interpret, plot_model_vs_real, makePredVideo, MSEbyDist
+from babelfish.helpers import get_frames_from_z, get_imaging_from_fish, gen_imaging, read_cnmf, no_overlap_idx, train_valid_test_split, train_test_split, pad_imaging
+
+from babelfish.stats import sampleMSE
+from babelfish.plot import interpret, plot_model_vs_real, makePredVideo, MSEbyDist
+
+from babelfish.data import ZebraFishData
+
+
+from babelfish.data import ZebraFishData
+# from babelfish.deep_kSVD import Deep_KSVD, train
+from babelfish.half_precision import network_to_half
+
+T.backends.cudnn.benchmark = True
+
+mlflow.set_tracking_uri("https://mlflow.tylerbenster.com")
+mlflow.set_experiment("babelfish")
+
+# PARAMETERS
+half=False
+
+# TODO: create decorator to automatically log params to mlflow?
+# https://stackoverflow.com/a/10724602/1952454
+
+@click.command()
+@click.argument("tyh5_path", type=click.Path(exists=True))
+@click.argument("model", type=click.Choice(["skip", "kSVD", "freeze"]),
+    default="skip")
+@click.argument("dataset", type=str, required=False,
+    default="/imaging/motion_corrected_small")
+@click.option("--num-workers", type=int, default=16)
+@click.option("--prev-frames", type=int, default=5)
+@click.option("--next-frames", type=int, default=5)
+@click.option("--kl-lambda", type=float, default=5e-4)
+@click.option("--sparse-lambda", type=float, default=1e-3)
+@click.option("--lr", type=float, default=1e-3)
+@click.option("--nepochs", type=int, default=15)
+@click.option("--n-embedding", type=int, default=20)
+@click.option("--batch-size", type=int, default=32)
+@click.option("--multi-gpu/--single-gpu", default=False)
+@click.option("--gpus", type=str, default=False,
+    help="Comma separated GPUs, e.g. '2,3'")
+def main(tyh5_path, model, dataset,
+    num_workers, prev_frames, next_frames, kl_lambda, sparse_lambda, lr,
+    nepochs, n_embedding, batch_size, multi_gpu, gpus):
+    if model=="skip":
+        from babelfish.model.deep_skip import DeepSkip, train
+        Model = DeepSkip
+    elif model=='kSVD':
+        from babelfish.model.deep_kSVD import Deep_KSVD, train
+        Model = Deep_KSVD
+    elif model=='freeze':
+        from babelfish.model.deep_freeze import DeepFreeze, train, trainBoth
+        Model = DeepFreeze
+        train = trainBoth
+
+    with h5py.File(tyh5_path, 'a') as tyh5:
+        # TODO: not tested for volumes
+        imaging = tyh5[dataset]
+        nFrames = len(imaging)
+        tvt_split = train_test_split(nFrames, nchunks=20)
+        total_examples = sum([len(x) for x in tvt_split.values()])
+        print(["{}: {} ({:.2f}%)".format(k, len(v), 100*len(v)/total_examples) for k,v in tvt_split.items()])
+
+
+        train_data = ZebraFishData(imaging, {},
+                        tvt_split['train'], prev_frames,next_frames)
+
+        conv_model = Model(nZ,H,W,nEmbedding,prev_frames,next_frames, tensor=tensor)
+        conv_model.cuda()
+        if multi_gpu:
+            conv_model = nn.DataParallel(conv_model)
+        
+        # log params
+
+        with mlflow.start_run():
+            mlflow.log_param("tyh5_path", tyh5_path)
+            nParams = np.sum([np.prod(x.shape) for x in conv_model.parameters()])
+            mlflow.log_param("nParams", nParams)
+            print("total num params:", nParams)
+
+            if model=="kSVD":
+                avg_Y_loss, avg_Y_valid_loss = train(conv_model,train_data,test_data,nepochs,lr=lr,
+                    sparse_lambda=sparse_lambda, half=half, cuda=cuda)
+            elif model=="skip" or model=="freeze":
+                avg_Y_loss, avg_Y_valid_loss = train(conv_model,train_data,test_data,nepochs,lr=lr, kl_lambda=1e-3, half=half, cuda=cuda, batch_size=batch_size, num_workers=num_workers)
+
+            now = datetime.datetime.today().strftime('%y%m%d-%I:%M%p')
+
+            model_name = "/data2/trained_models/{}_{}_{}_X=t-4:t_Y=t+1,t+5_epochs={}".format(now, f.fishid, model, nepochs) +     "_Y_MSE={:.3E}_Y_val_MSE={:.3E}".format(avg_Y_loss, avg_Y_valid_loss)
+
+
+            T.save(conv_model.state_dict(),model_name+".pt")
+            mlflow.pytorch.log_model(conv_model)
+            print("Saved "+model_name+".pt")
+
+            frame = makePredVideo(conv_model,train_data,name=model_name+'_train')
+            makePredVideo(conv_model,train_data,name=model_name+'_test')
+
+
+
+
+        
+
+
+if __name__ == '__main__':
+    main()

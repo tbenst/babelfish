@@ -1,0 +1,39 @@
+{
+
+    "files.defaultLanguage": "python",
+    // TODO find solution
+    // "python.pythonPath": "/home/tyler/.nix-profile/bin/python",
+    // "python.pythonPath": "/Computer/bin/caiman/python",
+    // "python.venvPath": "/Computer/bin/caiman/python",
+    // "python.venvPath": "/Computer/bin/caiman/python",
+
+    // "nixEnvSelector.nixShellConfig": "~/code/babelfish/default.nix",
+    // "nixEnvSelector.nixShellConfig": "${workspaceRoot}/conda.nix",
+    "nixEnvSelector.nixShellConfig": "${workspaceRoot}/default.nix",
+    "files.associations": {
+        "main": "python",
+        "btf_2_hdf5_small": "python",
+        // https://stackoverflow.com/questions/49410524/assign-file-with-no-extension-to-a-language-on-vs-code-as-default
+        "[!.]": "python",
+        "[!.][!.]": "python",
+        "[!.][!.][!.]": "python",
+        "[!.][!.][!.][!.]": "python",
+        "[!.][!.][!.][!.][!.]": "python",
+        "[!.][!.][!.][!.][!.][!.]": "python",
+        "[!.][!.][!.][!.][!.][!.][!.]": "python",
+        "[!.][!.][!.][!.][!.][!.][!.][!.]": "python",
+        "[!.][!.][!.][!.][!.][!.][!.][!.][!.]": "python",
+        "[!.][!.][!.][!.][!.][!.][!.][!.][!.][!.]": "python",
+        "[!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.]": "python",
+        "[!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.]": "python",
+        "[!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.]": "python",
+        "[!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.]": "python",
+        "[!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.]": "python",
+        "[!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.]": "python",
+        "[!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.]": "python",
+        "[!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.]": "python",
+        "[!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.]": "python",
+        "[!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.]": "python"
+    },
+    "python.pythonPath": "/home/tyler/.conda/envs/caiman/bin/python"
+}

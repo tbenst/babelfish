@@ -1,0 +1,6 @@
+#!/usr/bin/env -S conda run -n caiman python
+import tifffile
+tiff_fn  = "/data/dlab/zfish_2p/20191101_6f/f2_e1_omr.ome.btf"
+
+mm = tifffile.TiffFile(tiff_fn).asarray(out='memmap')
+print(type(mm))

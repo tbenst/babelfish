@@ -3,17 +3,17 @@ import numpy as np
 import torch as T
 from torch.utils.data import DataLoader, Dataset
 
+# updated 2019/12/15
 class ZebraFishData(Dataset):
     "B x nFrames x Z x H x W"
-    def __init__(self, imaging, shocks, tail_movements,
+    def __init__(self, imaging, auxiliary={},
                  index_map=None, prev_frames=2, next_frames=1):
-        data = imaging - imaging.mean(0)
         # use channel for future / prev frames
-        self.data = T.from_numpy(data)
+        self.data = imaging
         self.prev_frames = prev_frames
         self.next_frames = next_frames
-        self.shocks = shocks
-        self.tail_movements = tail_movements
+        self.auxiliary = auxiliary
+        self.aux_vars = list(auxiliary.keys())
         self.index_map = index_map
 
     def __len__(self):
@@ -28,18 +28,21 @@ class ZebraFishData(Dataset):
             idx = self.index_map[i]
         else:
             idx = i + self.prev_frames - 1 # avoid wraparound
-        X = {"brain": [], "shock": [], "tail_movement": []}
-        Y = {"brain": [], "shock": [], "tail_movement": []}
+        aux = {k: [] for k in self.auxiliary.keys()}
+        X = {"brain": []}
+        X.update(aux)
+        Y = {"brain": []}
+        Y.update(aux)
         for i in reversed(range(self.prev_frames)):
             ix = idx-i
             X["brain"].append(self.data[ix])
-            X["shock"].append(self.shocks[ix])
-            X["tail_movement"].append(self.tail_movements[ix])
+            for k,v in self.auxiliary.items():
+                X[k].append(v[ix])
         for i in range(1,self.next_frames+1):
             ix = idx+i
             Y["brain"].append(self.data[ix])
-            Y["shock"].append(self.shocks[ix])
-            Y["tail_movement"].append(self.tail_movements[ix])
+            for k,v in self.auxiliary.items():
+                Y[k].append(v[ix])
         X = {k: T.stack(v,0) for k,v in X.items()}
         Y = {k: T.stack(v,0) for k,v in Y.items()}
         return X, Y

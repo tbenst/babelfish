@@ -1,0 +1,86 @@
+#!/usr/bin/env nix-shell
+#! nix-shell -I nixpkgs=https://github.com/tbenst/nixpkgs/archive/a6d77b1403caaf46f19223eab8638f55927f56e2.tar.gz
+#! nix-shell -i python -p "python3.withPackages(ps: with ps; [ moviepy setuptools matplotlib h5py])"
+
+# TODO add support for NVENC https://github.com/Zulko/moviepy/issues/1014 (will need to use default.nix)
+# https://devblogs.nvidia.com/nvidia-ffmpeg-transcoding-guide/
+#%%
+import sys
+nargs = len(sys.argv)
+if nargs<2:
+    print("""usage: make_video <*.ty.h5> [dataset]
+        example: make_video f1_e1.ty.h5 "/imaging/motion_corrected"
+        """)
+    exit(0)
+elif nargs==2:
+    dataset = "/imaging/motion_corrected"
+else:
+    dataset = sys.argv[2]
+h5_path = sys.argv[1]
+
+
+import moviepy.editor as mpy
+import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
+from functools import partial
+from moviepy.video.io.bindings import mplfig_to_npimage
+import h5py
+import os
+import numpy as np
+
+cdict = {'red':   [[0.0,  0.0, 0.0],
+                   [1.0,  0.0, 0.0]],
+         'green': [[0.0,  0.0, 0.0],
+                   [1.0,  1.0, 1.0]],
+         'blue':  [[0.0,  0.0, 0.0],
+                   [1.0,  0.0, 0.0]]}
+cmap_gfp = LinearSegmentedColormap('gfp', segmentdata=cdict, N=256)
+
+name, ext = os.path.splitext(h5_path)
+name, ext = os.path.splitext(name)
+vid_path = name + ".mp4"
+fig_path = name + ".jpg"
+#%%
+
+def maxZ(volume):
+    # return volume.sum(axis=1) # or axis=0 before reformating of btf...?
+    raise(NotImplemented())
+
+
+def make_frame(t,imgs,vmin=0,vmax=1):
+    ax.clear()
+    global c
+    im = ax.imshow(imgs[c],vmin=vmin, vmax=vmax, cmap=cmap_gfp)
+    if c==startC:
+        fig.savefig(fig_path)
+    c += 1
+    return mplfig_to_npimage(fig)
+    
+with h5py.File(h5_path, 'a') as tyh5:
+    imaging = tyh5[dataset]
+    maxVal = np.percentile(imaging[0:500],99)
+    minVal = np.percentile(imaging[0:500],1)
+
+    fig, ax = plt.subplots(figsize=(20,20))
+    ax.set_axis_off()
+    # fig, ax = plt.subplots(figsize=(16,9))
+    global c
+    startC = 0
+    c = startC
+
+
+    minVal = 0
+    maxVal = 5000
+    mf = partial(make_frame, imgs=imaging, vmin=minVal, vmax=maxVal)
+    if len(imaging.shape)==4:
+        mf_for_vid = lambda x: mf(maxZ(x))
+    else:
+        mf_for_vid = mf
+    # mf = partial(make_frame, imgs=maxZ, vmin=minVal, vmax=maxVal)
+    # duration = int(len(imaging) / 30)
+    duration = 30
+    print(f"duration will be {duration / 60} minutes")
+    animation = mpy.VideoClip(mf_for_vid, duration = duration)
+    animation.write_videofile(vid_path,fps=30,codec="libx265")
+
+# %%

@@ -1,0 +1,137 @@
+#!/usr/bin/env -S conda run -n caiman python
+# script requires a conda environment called "caiman" with CaImAn installed
+# %%
+
+# %%
+
+import sys, os
+import caiman
+# TODO what happens if a 4D volume? Need to swap axes 0&1?
+# if hasattr(__builtins__, '__IPYTHON__'):
+if True:
+    tiff_fn  = "/data/dlab/zfish_2p/20191101_6f/f2_e1_omr.ome.btf" # big
+    # tiff_fn  = "/data/dlab/zfish_2p/20191101_6f/f3_e1.ome.btf" # small
+    output_path = tiff_fn[:-8]+".ty.h5"
+    sys.argv = ["motion_correction", tiff_fn]
+elif len(sys.argv)<2:
+    print("""usage: motion_correction <input_tiff_path> [<output_path>]
+        example: motion_correction f1e1.ome.btf""")
+    exit(0)
+elif len(sys.argv)==3:
+    output_path = sys.argv[2]
+else:
+    folder, full_name = os.path.split(sys.argv[1])
+    name, ext1 = os.path.splitext(full_name)
+    name, ext2 = os.path.splitext(name) # for two extensions eg .ome.btf
+    output_path = os.path.join(folder,f"{name}.ty.h5")
+
+input_path = sys.argv[1]
+print("Output is " + output_path)
+
+from builtins import zip
+from builtins import str
+from builtins import map
+from builtins import range
+from past.utils import old_div
+
+import cv2
+from glob import glob
+import re
+import matplotlib.pyplot as plt
+import numpy as np
+import psutil
+import scipy
+from skimage.external.tifffile import TiffFile
+import time
+import logging
+import multiprocessing
+
+try:
+    cv2.setNumThreads(0)
+except:
+    pass
+
+logging.basicConfig(format=
+                          "%(relativeCreated)12d [%(filename)s:%(funcName)20s():%(lineno)s] [%(process)d] %(message)s",
+                    # filename="/tmp/caiman.log",
+                    level=logging.DEBUG)
+
+import caiman as cm
+from caiman.motion_correction import MotionCorrect, tile_and_correct, motion_correction_piecewise
+from caiman.utils.utils import download_demo
+
+# os.environ['CUDA_VISIBLE_DEVICES'] = ','.join([str(i) for i in [9]])
+# os.environ['MKL_NUM_THREADS'] = '1'
+# os.environ['OPENBLAS_NUM_THREADS'] = '1'
+
+fnames = [ input_path ]
+m_orig = cm.load_movie_chain(fnames, in_memory=False, subindices=slice(100))[0:-1]
+
+max_shifts = (6, 6)  # maximum allowed rigid shift in pixels (view the movie to get a sense of motion)
+strides =  (48, 48)  # create a new patch every x pixels for pw-rigid correction
+overlaps = (24, 24)  # overlap between pathes (size of patch strides+overlaps)
+num_frames_split = 100  # length in frames of each chunk of the movie (to be processed in parallel)
+max_deviation_rigid = 3   # maximum deviation allowed for patch with respect to rigid shifts
+pw_rigid = False  # flag for performing rigid or piecewise rigid motion correction
+shifts_opencv = True  # flag for correcting motion using bicubic interpolation (otherwise FFT interpolation is used)
+border_nan = 'copy'  # replicate values along the boundary (if True, fill in with NaN)
+
+#%% start the cluster (if a cluster already exists terminate it)
+if 'dview' in locals():
+    cm.stop_server(dview=dview)
+
+n_processes = int(multiprocessing.cpu_count() / 2) # ignore hyperthreads
+c, dview, _ = cm.cluster.setup_cluster(
+    backend='local', n_processes=n_processes, single_thread=False)
+
+    # create a motion correction object
+mc = MotionCorrect(fnames, dview=dview, max_shifts=max_shifts,
+                  strides=strides, overlaps=overlaps,
+                  max_deviation_rigid=max_deviation_rigid,
+                  shifts_opencv=shifts_opencv, nonneg_movie=True,
+                  border_nan=border_nan, use_cuda=True)
+
+
+# motion correct piecewise rigid
+# mc.pw_rigid = True  # turn the flag to True for pw-rigid motion correction
+# m_els = cm.load(mc.fname_tot_els)
+
+mc.motion_correct(save_movie=True)
+m_rig = cm.load(mc.mmap_file)
+
+# %%
+# write out to hdf5
+max_memory = 16 * 1024**3 # GiB to bytes
+size_per_sample = np.product(m_rig.shape[1:]) * m_rig.dtype.itemsize # bytes
+chunk_size = int(max_memory/size_per_sample)
+
+h5f = h5py.File(hdf5_out, 'a')
+try:
+    del h5f['imaging/motion_corrected']
+    print("overwriting imaging/motion_corrected")
+except:
+    pass
+
+out_shape = m_rig.shape
+if len(out_shape)==3:
+    # add z dim
+    out_shape = (out_shape[0],1,*out_shape[1:])
+dset = h5f.create_dataset('imaging/motion_corrected',out_shape, dtype=m_rig.dtype)
+for s in tqdm(range(0,len(m_rig),chunk_size)):
+    dset[s:s+chunk_size] = m_rig[s:s+chunk_size]
+# dset = h5f.create_dataset('imaging/motion_corrected', data=m_rig)
+dset.attrs['max_shifts'] = max_shifts
+dset.attrs['strides'] = strides
+dset.attrs['overlaps'] = overlaps
+dset.attrs['num_frames_split'] = num_frames_split
+dset.attrs['max_deviation_rigid'] = max_deviation_rigid
+dset.attrs['pw_rigid'] = pw_rigid
+dset.attrs['shifts_opencv'] = shifts_opencv
+dset.attrs['border_nan'] = border_nan
+
+
+
+# del mc.mmap_file
+print("finished")
+
+# %%

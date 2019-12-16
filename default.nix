@@ -6,13 +6,20 @@ let
           enableCuda = true;
           enableFfmpeg = true;
         };
-        pytorch = python-super.pytorch.override {
-          cudaSupport = true;
-          mklSupport = true;
-        };
+#        pytorch = python-super.pytorch.override {
+#          cudaSupport = true;
+          # mklSupport = true;
+#        };
         /* numpy = python-super.numpy.override { blas = super.mkl; }; */
       };
-      python = super.python.override {packageOverrides = self.pythonOverrides;};
+      python37 = super.python37.override {packageOverrides = self.pythonOverrides;};
+#      cudatoolkit = super.cudatoolkit_10_1;
+#      cudnn_cudatoolkit = super.cudnn_cudatoolkit_10_0;
+      # TODO switch to ffmpeg on left side for GPU (moviepy uses via imageio)
+      ffmpeg = super.ffmpeg-full.override {
+        nonfreeLicensing = true;
+        nvenc = true; # nvidia support
+      };
       ffmpeg-full = super.ffmpeg-full.override {
         nonfreeLicensing = true;
         nvenc = true; # nvidia support
@@ -24,8 +31,8 @@ let
 in
 with pkgs.python37Packages;
 buildPythonPackage rec {
-  name = "mypackage";
-  src = ./babelfish;
+  name = "babelfish";
+  src = ./.;
   doCheck = false;
   checkPhase = ''
     python -m unittest discover
@@ -47,10 +54,12 @@ buildPythonPackage rec {
     pims
     pytest
     pytorch
+    pytorch-lightning
     scikitlearn
     scikitimage
     scipy
     seaborn
+    tables
     torchvision
     tqdm
     tifffile

@@ -1,0 +1,172 @@
+#!/usr/bin/env nix-shell
+#! nix-shell -I nixpkgs=https://github.com/tbenst/nixpkgs/archive/a6d77b1403caaf46f19223eab8638f55927f56e2.tar.gz
+#! nix-shell ../../default.nix -i python
+#%%
+import sys
+if hasattr(__builtins__, '__IPYTHON__'):
+    tiff_fn = "/data/dlab/zfish_2p/20191017_6f/f1e1_gc6f_20px_omr_0001.ome.btf"
+    tiff_fn = "/data/dlab/zfish_2p/20191101_6f/f2_e1_omr.ome.btf"
+    tiff_fn = "/data/dlab/zfish_2p/20190919/f1r1_omr_checker.ome.btf"
+    window_size = 9000
+    sys.argv = ["btf_2_hdf5_small", tiff_fn, window_size]
+elif len(sys.argv)<3:
+    print("""usage: btf_2_small_npz <tiff path> <window_size> [<output_path>]
+        example: btf_2_small_npz f1e1.ome.btf 600 f1e1.npz
+        window_size is number of frames for calc background fluorescence""")
+    exit(0)
+
+tiff_fn = sys.argv[1]
+window_size = sys.argv[2]
+print("converting ", tiff_fn)
+window_size = int(window_size)
+#%%
+import matplotlib
+matplotlib.use('Agg')
+
+import tifffile
+import re
+import os
+import numpy as np
+from babelfish.helpers import resize_3d, resize_4d
+from scipy.ndimage.filters import minimum_filter1d
+import h5py
+
+import moviepy.editor as mpy
+from functools import partial
+from moviepy.video.io.bindings import mplfig_to_npimage
+import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
+#%%
+# tiff = tifffile.imread(tiff_fn, out="memmap")
+tiffFile = tifffile.TiffFile(tiff_fn)
+    #  for page in tif.pages:
+    #      for tag in page.tags.values():
+    #          tag_name, tag_value = tag.name, tag.value
+    #      image = page.asarray()
+
+tiff = tiffFile.series[0]
+#%%
+# TODO need to rewrite to be streaming (too much memory usage)
+print("resizing")
+if len(tiff.shape)==3:
+    nframes, H, W = tiff.shape
+    newStack = resize_3d(tiff, 0.5, 0.5)
+    dims = 3
+elif len(tiff.shape)==4:
+    Z, nframes, H, W = tiff.shape
+    newStack = resize_4d(tiff, 0.5, 0.5)
+    # newStack = newStack.swapaxes(0,1)
+    dims = 4
+else:
+    raise(NotImplemented("wrong dimensions", tiff.shape))
+newH, newW = newStack.shape[-2:]
+print(f"resized from ({H},{W}) to ({newH},{newW})")
+
+if len(sys.argv)==4:
+    out = sys.argv[3]
+else:
+    out = re.match('(.*)\.(tif|tiff|ome\.btf)', tiff_fn)[1]
+
+hdf5_out = out + ".ty.h5"
+
+# %%
+f = minimum_filter1d(newStack, window_size, axis=0).astype(np.float32)
+eps = 1
+
+# %%
+
+def make_video(newStack, mp4_out):
+    cdict = {'red':   [[0.0,  0.0, 0.0],
+                    [1.0,  0.0, 0.0]],
+            'green': [[0.0,  0.0, 0.0],
+                    [1.0,  1.0, 1.0]],
+            'blue':  [[0.0,  0.0, 0.0],
+                    [1.0,  0.0, 0.0]]}
+    cmap_gfp = LinearSegmentedColormap('gfp', segmentdata=cdict, N=256)
+    maxVal = np.percentile(newStack[0:500],99.9)
+    minVal = np.percentile(newStack[0:500],0.1)
+
+    fig_path = os.path.join(out+".jpg")
+    print("saving ", mp4_out)
+
+    fig, ax = plt.subplots(figsize=(20,20))
+    ax.set_axis_off()
+    # fig, ax = plt.subplots(figsize=(16,9))
+    global c
+    startC = 0
+    c = startC
+    def make_frame(t,imgs,vmin=0,vmax=1):
+        ax.clear()
+        global c
+        im = ax.imshow(imgs[c],vmin=vmin, vmax=vmax, cmap=cmap_gfp)
+        if c==startC:
+            fig.savefig(fig_path)
+        c += 1
+        return mplfig_to_npimage(fig)
+
+    minVal = 0
+    maxVal = 5000
+
+    mf = partial(make_frame, imgs=newStack, vmin=minVal, vmax=maxVal)
+    # mf = partial(make_frame, imgs=maxZ, vmin=minVal, vmax=maxVal)
+    animation = mpy.VideoClip(mf, duration=31)
+    # 11.5it/s without GPU on lensman. Single threaded?!
+    animation.write_videofile(mp4_out,fps=30,codec="libx265")
+
+# %%
+print("saving ", hdf5_out)
+
+h5f = h5py.File(hdf5_out, 'a')
+try:
+    del h5f['imaging/small']
+    print("overwriting imaging/small")
+except:
+    pass
+dset = h5f.create_dataset('imaging/small', data=newStack)
+dset.attrs['window_size'] = window_size
+
+if dims == 4:
+    mp4_out = out + "_maxZ.mp4"
+    make_video(newStack.sum(axis=1), mp4_out) # maxZ
+else:
+    mp4_out = out + ".mp4"
+    make_video(newStack, mp4_out) # maxZ
+
+newStack = (newStack-f+eps)/(f+eps) # Δf/f
+try:
+    del h5f['imaging/df_f_small']
+    print("overwriting imaging/df_f_small")
+except:
+    pass
+dset = h5f.create_dataset('imaging/df_f_small', data=newStack)
+dset.attrs['window_size'] = window_size
+
+if dims == 4:
+    mp4_out = out + "_df_f_maxZ.mp4"
+    make_video(newStack.sum(axis=1), mp4_out) # maxZ
+else:
+    mp4_out = out + "_df_f.mp4"
+    make_video(newStack, mp4_out) # maxZ
+
+
+
+h5f.close()
+#%%
+
+# %%
+
+# plt.imshow(newStack[0], cmap=cmap_gfp)
+# newStack[0].max()
+# # %%
+# (newStack[0].min(), newStack[0].max())
+
+
+# # %%
+# newStack[0].min()
+
+# # %%
+# newStack.max()
+
+# %%
+tiffFile.close()
+del newStack # TODO check if deletes file babelfish_temp_memmap.mmap
