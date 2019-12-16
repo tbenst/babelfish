@@ -3,6 +3,7 @@
 #! nix-shell ../../default.nix -i python
 
 # TODO add support for NVENC https://github.com/Zulko/moviepy/issues/1014
+# TODO change to assume dim 4 as now part of imaging spec
 #%%
 import click
 import numpy as np
@@ -27,27 +28,37 @@ def main(h5_path, dataset, out_dataset):
         dtype = image.dtype
         nFrames = shape[0]
         assert dtype in [np.float32, np.float64]
-        assert len(shape)==3 #or len(shape)==4
         chunk_size = bf.helpers.chunk_size_for_memory_quota(imaging)
         if len(shape)==3:
+            click.confirm('Spec calls for 4d imaging, but this is 3d. Are you'
+                'sure you want to proceed?',
+                    abort=True)
+
             nframes, H, W = imaging.shape
             new_image = bf.helpers.resize_3d(imaging[[0]],0.5,0.5)
             newH, newW = new_image.shape[-2:]
             if out_dataset in tyh5:
                 click.confirm(f'Do you want to overwrite {out_dataset}?',
                     abort=True)
-            del tyh5[out_dataset]
+                del tyh5[out_dataset]
             dset = tyh5.create_dataset(out_dataset,(nFrames, newH, newW),
                 dtype=dtype)
             for s in tqdm(range(0,nFrames,chunk_size)):
                 new_stack = bf.helpers.resize_3d(imaging[s:s+chunk_size], 0.5, 0.5)
                 dset[s:s+chunk_size] = new_stack
         elif len(shape)==4:
-            raise(NotImplemented())
-            Z, nframes, H, W = imaging.shape
-            newStack = resize_4d(imaging, 0.5, 0.5)
-            # newStack = newStack.swapaxes(0,1)
-            dims = 4
+            nframes, Z, H, W = imaging.shape
+            new_image = bf.helpers.resize_4d(imaging[[0]], 0.5, 0.5)
+            newH, newW = new_image.shape[-2:]
+            if out_dataset in tyh5:
+                click.confirm(f'Do you want to overwrite {out_dataset}?',
+                    abort=True)
+                del tyh5[out_dataset]
+            dset = tyh5.create_dataset(out_dataset,(nFrames, Z, newH, newW),
+                dtype=dtype)
+            for s in tqdm(range(0,nFrames,chunk_size)):
+                new_stack = bf.helpers.resize_4d(imaging[s:s+chunk_size], 0.5, 0.5)
+                dset[s:s+chunk_size] = new_stack
         else:
             raise(NotImplemented("wrong dimensions", tiff.shape))
         

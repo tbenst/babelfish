@@ -116,9 +116,15 @@ out_shape = m_rig.shape
 if len(out_shape)==3:
     # add z dim
     out_shape = (out_shape[0],1,*out_shape[1:])
+    add_z_axis = True
+else:
+    add_z_axis = False
 dset = h5f.create_dataset('imaging/motion_corrected',out_shape, dtype=m_rig.dtype)
 for s in tqdm(range(0,len(m_rig),chunk_size)):
-    dset[s:s+chunk_size] = m_rig[s:s+chunk_size]
+    if add_z_axis:
+        dset[s:s+chunk_size,0] = m_rig[s:s+chunk_size]
+    else:
+        dset[s:s+chunk_size] = m_rig[s:s+chunk_size]
 # dset = h5f.create_dataset('imaging/motion_corrected', data=m_rig)
 dset.attrs['max_shifts'] = max_shifts
 dset.attrs['strides'] = strides

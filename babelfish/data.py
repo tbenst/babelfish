@@ -35,12 +35,14 @@ class ZebraFishData(Dataset):
         Y.update(aux)
         for i in reversed(range(self.prev_frames)):
             ix = idx-i
-            X["brain"].append(self.data[ix])
+            datum = T.tensor(self.data[ix])
+            X["brain"].append(datum)
             for k,v in self.auxiliary.items():
                 X[k].append(v[ix])
         for i in range(1,self.next_frames+1):
             ix = idx+i
-            Y["brain"].append(self.data[ix])
+            datum = T.tensor(self.data[ix])
+            Y["brain"].append(datum)
             for k,v in self.auxiliary.items():
                 Y[k].append(v[ix])
         X = {k: T.stack(v,0) for k,v in X.items()}

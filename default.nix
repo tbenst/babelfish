@@ -27,7 +27,7 @@ let
     }
   )];
   pkgs = import <nixpkgs> { inherit overlays;};
-  # mkDerivation = import ./autotools.nix pkgs;
+  secrets = import ./secrets.nix;
 in
 with pkgs.python37Packages;
 buildPythonPackage rec {
@@ -37,6 +37,9 @@ buildPythonPackage rec {
   checkPhase = ''
     python -m unittest discover
   '';
+
+  inherit (secrets) MLFLOW_TRACKING_URI MLFLOW_TRACKING_USERNAME MLFLOW_TRACKING_PASSWORD;
+
   propagatedBuildInputs = [
     bokeh
     cython
@@ -55,6 +58,7 @@ buildPythonPackage rec {
     pytest
     pytorch
     pytorch-lightning
+    requests
     scikitlearn
     scikitimage
     scipy

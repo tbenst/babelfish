@@ -8,6 +8,7 @@ from ..super_res import SuperResSkip
 from torch.utils.data import DataLoader, Dataset
 from ..misc import sigmoid_schedule
 from tqdm import tqdm
+import mlflow
 
 
 
@@ -35,11 +36,11 @@ class DeepSkip(Vol2D):
         self.encoding_logvar = nn.Linear(self.resOut*self.nZ, nEmbedding)
         self.nhalf_embed = int(self.nEmbedding/2)
         # Prediction
-        self.pred1 = nn.Linear(self.nhalf_embed+next_frames, pred_hidden) # add dim for shock_{t+1}
+        self.pred1 = nn.Linear(self.nhalf_embed, pred_hidden) # add dim for shock_{t+1}
         self.pred2 = nn.Linear(pred_hidden, self.nhalf_embed) # last 10 (context) are unused
 
         # Prediction
-        self.predz1 = nn.Linear(self.nhalf_embed+next_frames, pred_hidden) # add dim for shock_{t+1}
+        self.predz1 = nn.Linear(self.nhalf_embed, pred_hidden) # add dim for shock_{t+1}
         self.predz2 = nn.Linear(pred_hidden, self.nhalf_embed) # last 10 (context) are unused
 
         # Decoding
@@ -56,9 +57,6 @@ class DeepSkip(Vol2D):
         # 11 x 128 x 256
 #         self.upconv5 = SuperResSkip(2,tensor)
         # 11 x 256 x 512
-
-        self.tail_decoding = nn.Linear(1,1)
-
         self._initialize_weights()
 
     def _initialize_weights(self):
@@ -87,22 +85,19 @@ class DeepSkip(Vol2D):
         layer_outputs = {k: T.stack(v,1) for k,v in layer_outputs.items()}
         mean = self.encoding_mean(out.reshape(x.shape[0],-1))
         logvar = self.encoding_logvar(out.reshape(x.shape[0],-1))
-        return mean, logvar, layer_outputs
+        return {"mean": mean, "logvar": logvar, "layer_outputs": layer_outputs}
 
-    def predict(self, x, shock):
-        x = T.cat([x, shock],1)
+    def predict(self, x):
         x = self.activation(self.pred1(x))
         x = self.pred2(x)
         return x
 
-    def predictZero(self, x, shock):
-        x = T.cat([x, shock],1)
+    def predictZero(self, x):
         x = self.activation(self.predz1(x))
         x = self.predz2(x)
         return x
 
     def decode(self, x, layer_output):
-        tail = F.sigmoid(self.tail_decoding(x[:,[0]])) # use first embedding only
         # b x 10
         # only use first half for brain data
         x = self.activation(self.decoding(x[:,:int(self.nEmbedding/2)]))
@@ -118,17 +113,25 @@ class DeepSkip(Vol2D):
 #         x = self.upconv5(x)
         x = self.crop(x[:,:,0])
         # squeeze channel
-        return x, tail
+        return x
 
-    def forward(self, x, shock):
-        "Return Previous volume (denoised), next volume (prediction), latent mean and logvar."
-        mean, logvar, layer_outputs = self.encode(x)
+    def forward(self, x):
+        """Return Previous volume (denoised), next volume (prediction), latent mean and logvar.
+        
+        x is B x T x Z x H x W
+        """
+
+        output = self.encode(x)
+        mean = output["mean"]
+        logvar = output["logvar"]
+        layer_outputs = output["layer_outputs"]
         encoded = self.sample_embedding(mean, logvar)
-        encoded_prev = self.predictZero(encoded[:,self.nhalf_embed:], shock)
-        encoded_pred = self.predict(encoded[:,:self.nhalf_embed], shock)
+        encoded_prev = self.predictZero(encoded[:,self.nhalf_embed:])
+        encoded_pred = self.predict(encoded[:,:self.nhalf_embed])
         prev = self.decode(encoded_prev, layer_outputs) # force to use only skip connections for decode
         pred = self.decode(encoded_pred, layer_outputs)
-        return prev, pred, mean, logvar # should we move variational layer? or return encoded_pred?
+        return {"prev": prev, "pred": pred, "mean": mean,
+            "logvar": logvar} # should we move variational layer? or return encoded_pred?
 
 def unit_norm_KL_divergence(mu, logvar):
     "Reconstruction + KL divergence losses summed over all elements and batch."
@@ -139,8 +142,10 @@ def unit_norm_KL_divergence(mu, logvar):
     return -0.5 * T.sum(1 + logvar - mu.pow(2) - logvar.exp())
 
 
-def train(model,train_data,valid_data, nepochs=10, lr=1e-3, kl_lambda=1, kl_tail=1e2, half=False, cuda=True, batch_size=16, num_workers=8):
-    dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+def train(model,train_data,valid_data, nepochs=10, lr=1e-3, kl_lambda=1, half=False, cuda=True, batch_size=16, num_workers=8):
+    # TODO allow specifying device
+    dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=True,
+        num_workers=num_workers, pin_memory=True)
     kl_schedule = T.from_numpy(sigmoid_schedule(nepochs))
     if half:
         optimizer = apex.fp16_utils.FP16_Optimizer(T.optim.Adam(model.parameters(),lr=lr))
@@ -155,20 +160,21 @@ def train(model,train_data,valid_data, nepochs=10, lr=1e-3, kl_lambda=1, kl_tail
         cum_X_loss = 0
         cum_Y_loss = 0
         cum_kld_loss = 0
-        cum_tail_loss = 0
         i = 0
         for batch_data in tqdm(dataloader):
             X, Y = batch_data
-            X, X_shock, X_tail = (X["brain"], X["shock"], X["tail_movement"])
-            Y, Y_shock, Y_tail = (Y["brain"], Y["shock"], Y["tail_movement"])
+            # TODO refactor for generic auxiliary vars
+            X = X["brain"]
+            Y = Y["brain"]
             if cuda:
+                # TODO data.to('cuda:0', non_blocking=True) or similar
                 X = X.cuda()
                 Y = Y.cuda()
-                X_shock = X_shock.cuda()
-                Y_shock = Y_shock.cuda()
-                X_tail = X_tail.cuda()
-                Y_tail = Y_tail.cuda()
-            (X_pred, X_pred_tail), (Y_pred, Y_pred_tail), mean, logvar = model(X, Y_shock)
+            output = model(X)
+            X_pred = output["prev"]
+            Y_pred = output["pred"]
+            mean = output["mean"]
+            logvar = output["logvar"]
             if half:
                 X_pred = X_pred.float()
                 Y_pred = Y_pred.float()
@@ -177,10 +183,13 @@ def train(model,train_data,valid_data, nepochs=10, lr=1e-3, kl_lambda=1, kl_tail
             kld = unit_norm_KL_divergence(mean, logvar)
             mse_X = F.mse_loss(X_pred, Y[:,0])
             mse_Y = F.mse_loss(Y_pred, Y[:,-1])
-            mse_tail = F.mse_loss(Y_pred_tail, Y_tail[:,[-1]])
-            loss = mse_X + mse_Y + kl_lambda*kl_schedule[e] * kld + kl_tail*mse_tail
+            loss = mse_X + mse_Y + kl_lambda*kl_schedule[e] * kld
             if e==0:
-                print("MSE_X: {:.3E}, MSE_Y: {:.3E}, KLD: {:.3E}, Tail: {:.3E}".format(float(mse_X),float(mse_Y),float(kld),float(mse_tail)))
+                mlflow.log_metrics({
+                    "MSE_X": float(mse_X)/batch_size,
+                    "MSE_Y": float(mse_Y)/batch_size,
+                    "KLD": float(kld)/batch_size,
+                    }, step=0)
             optimizer.zero_grad()
             if half:
                 optimizer.backward(loss)
@@ -191,36 +200,45 @@ def train(model,train_data,valid_data, nepochs=10, lr=1e-3, kl_lambda=1, kl_tail
             cum_X_loss += float(mse_X)
             cum_Y_loss += float(mse_Y)
             cum_kld_loss += float(kld)
-            cum_tail_loss += float(mse_tail)
-
+            i+=1
+        
+        avg_loss = cum_loss/len(train_data)
         avg_Y_loss = cum_Y_loss/len(train_data)
         avg_X_loss = cum_X_loss/len(train_data)
-        print("avg_loss: {:3E}, X_loss: {:3E}, Y_loss: {:3E}, KLD: {:3E}, tail_loss: {:3E}".format(
-            cum_loss/len(train_data), avg_X_loss, avg_Y_loss, cum_kld_loss/len(train_data), cum_tail_loss/len(train_data)))
+        avg_KLD_loss = cum_kld_loss/len(train_data)
+        mlflow.log_metrics({
+            "avg_loss": avg_loss,
+            "MSE_X": avg_X_loss,
+            "MSE_Y": avg_Y_loss,
+            "KLD": avg_KLD_loss
+            }, step=e)
+        print("avg_loss: {:3E}, X_loss: {:3E}, Y_loss: {:3E}, KLD: {:3E}".format(
+            avg_loss, avg_X_loss, avg_Y_loss, avg_KLD_loss))
+        mlflow.pytorch.log_model(model, f"models/epoch/{e}")
     return avg_X_loss, avg_Y_loss
 
 
-def validation_loss(model,valid_data, kl_lambda=1, kl_tail=1e2, half=False, cuda=True, batch_size=16, num_workers=8):
-    valid_dataloader = DataLoader(valid_data, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+def validation_loss(model,valid_data, kl_lambda=1, half=False, cuda=True, batch_size=16, num_workers=8):
+    valid_dataloader = DataLoader(valid_data, batch_size=batch_size,
+        shuffle=True, num_workers=num_workers, pin_memory=True)
     cum_loss = 0
     cum_X_loss = 0
     cum_Y_loss = 0
     cum_kld_loss = 0
-    cum_tail_loss = 0
     with T.no_grad():
         model.eval()
         for batch_data in tqdm(valid_dataloader):
             X, Y = batch_data
-            X, X_shock, X_tail = (X["brain"], X["shock"], X["tail_movement"])
-            Y, Y_shock, Y_tail = (Y["brain"], Y["shock"], Y["tail_movement"])
+            X = X["brain"]
+            Y = Y["brain"]
             if cuda:
                 X = X.cuda()
                 Y = Y.cuda()
-                X_shock = X_shock.cuda()
-                Y_shock = Y_shock.cuda()
-                X_tail = X_tail.cuda()
-                Y_tail = Y_tail.cuda()
-            (X_pred, X_pred_tail), (Y_pred, Y_pred_tail), mean, logvar = model(X, Y_shock)
+            output = model(X)
+            X_pred = output["prev"]
+            Y_pred = output["pred"]
+            mean = output["mean"]
+            logvar = output["logvar"]
             if half:
                 X_pred = X_pred.float()
                 Y_pred = Y_pred.float()
@@ -229,40 +247,35 @@ def validation_loss(model,valid_data, kl_lambda=1, kl_tail=1e2, half=False, cuda
             kld = unit_norm_KL_divergence(mean, logvar)
             mse_X = F.mse_loss(X_pred, Y[:,0])
             mse_Y = F.mse_loss(Y_pred, Y[:,-1])
-            mse_tail = F.mse_loss(X_pred_tail, X_tail[:,[-1]])
-            loss = mse_X + mse_Y + kl_lambda * kld + kl_tail*mse_tail
+            loss = mse_X + mse_Y + kl_lambda * kld
             cum_loss += float(loss)
             cum_X_loss += float(mse_X)
             cum_Y_loss += float(mse_Y)
             cum_kld_loss += float(kld)
-            cum_tail_loss += float(mse_tail)
     model.train()
     avg_Y_valid_loss = cum_Y_loss/len(valid_data)
     avg_X_valid_loss = cum_X_loss/len(valid_data)
-    print("VALIDATION: avg_loss: {:3E}, X_loss: {:3E}, Y_loss: {:3E}, KLD: {:3E}, tail_loss: {:3E}".format(
-    cum_loss/len(valid_data), cum_X_loss/len(valid_data), avg_Y_valid_loss, cum_kld_loss/len(valid_data), cum_tail_loss/len(valid_data)))
+    print("VALIDATION: avg_loss: {:3E}, X_loss: {:3E}, Y_loss: {:3E}, KLD: {:3E}".format(
+    cum_loss/len(valid_data), cum_X_loss/len(valid_data), avg_Y_valid_loss, cum_kld_loss/len(valid_data)))
     return avg_X_valid_loss, avg_Y_valid_loss
 
 def deep_skip_predict(model, batch, mask, plane):
     with T.no_grad():
         model.eval()
         X, Y = batch
-        X, X_shock, X_tail = (X["brain"], X["shock"], X["tail_movement"])
+        X = X["brain"]
         X = X[None]
-        X_shock = X_shock[None]
-        X_tail = X_tail[None]
-        Y, Y_shock, Y_tail = (Y["brain"], Y["shock"], Y["tail_movement"])
+        Y = Y["brain"]
         Y = Y[None]
-        Y_shock = Y_shock[None]
-        Y_tail = Y_tail[None]
         if cuda:
             X = X.cuda()
             Y = Y.cuda()
-            X_shock = X_shock.cuda()
-            Y_shock = Y_shock.cuda()
-            X_tail = X_tail.cuda()
-            Y_tail = Y_tail.cuda()
-        (X_pred, X_pred_tail), (Y_pred, Y_pred_tail), mean, logvar = model(X, Y_shock)
+        output = model(X)
+        X_pred = output["prev"]
+        Y_pred = output["pred"]
+        mean = output["mean"]
+        logvar = output["logvar"]
+
         if half:
             X_pred = X_pred.float()
             Y_pred = Y_pred.float()

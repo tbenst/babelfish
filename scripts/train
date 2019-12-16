@@ -46,10 +46,12 @@ from babelfish.data import ZebraFishData
 # from babelfish.deep_kSVD import Deep_KSVD, train
 from babelfish.half_precision import network_to_half
 
-T.backends.cudnn.benchmark = True
+# T.backends.cudnn.benchmark = False
+T.backends.cudnn.benchmark = True # not safe for determinism
+T.backends.cudnn.deterministic = True
 
-mlflow.set_tracking_uri("https://mlflow.tylerbenster.com")
-mlflow.set_experiment("babelfish")
+EXPERIMENT_NAME = "babelfish"
+mlflow.set_experiment(EXPERIMENT_NAME)
 
 # PARAMETERS
 half=False
@@ -69,15 +71,18 @@ half=False
 @click.option("--kl-lambda", type=float, default=5e-4)
 @click.option("--sparse-lambda", type=float, default=1e-3)
 @click.option("--lr", type=float, default=1e-3)
-@click.option("--nepochs", type=int, default=15)
+@click.option("--n-epochs", type=int, default=15)
 @click.option("--n-embedding", type=int, default=20)
-@click.option("--batch-size", type=int, default=32)
+@click.option("--batch-size", type=int, default=64)
 @click.option("--multi-gpu/--single-gpu", default=False)
 @click.option("--gpus", type=str, default=False,
     help="Comma separated GPUs, e.g. '2,3'")
+@click.option("--seed", type=int, default=24)
 def main(tyh5_path, model, dataset,
     num_workers, prev_frames, next_frames, kl_lambda, sparse_lambda, lr,
-    nepochs, n_embedding, batch_size, multi_gpu, gpus):
+    n_epochs, n_embedding, batch_size, multi_gpu, gpus, seed):
+    T.manual_seed(seed)
+    np.random.seed(seed)
     if model=="skip":
         from babelfish.model.deep_skip import DeepSkip, train
         Model = DeepSkip
@@ -88,11 +93,13 @@ def main(tyh5_path, model, dataset,
         from babelfish.model.deep_freeze import DeepFreeze, train, trainBoth
         Model = DeepFreeze
         train = trainBoth
-
-    with h5py.File(tyh5_path, 'a') as tyh5:
+    cuda = True
+    with h5py.File(tyh5_path, 'r', swmr=True) as tyh5:
         # TODO: not tested for volumes
         imaging = tyh5[dataset]
-        nFrames = len(imaging)
+        assert len(imaging.shape) == 4
+        nFrames, nZ, H, W = imaging.shape
+        # TODO why 0.31% test??
         tvt_split = train_test_split(nFrames, nchunks=20)
         total_examples = sum([len(x) for x in tvt_split.values()])
         print(["{}: {} ({:.2f}%)".format(k, len(v), 100*len(v)/total_examples) for k,v in tvt_split.items()])
@@ -100,8 +107,10 @@ def main(tyh5_path, model, dataset,
 
         train_data = ZebraFishData(imaging, {},
                         tvt_split['train'], prev_frames,next_frames)
-
-        conv_model = Model(nZ,H,W,nEmbedding,prev_frames,next_frames, tensor=tensor)
+        test_data = ZebraFishData(imaging, {},
+                        tvt_split['test'], prev_frames,next_frames)
+        tensor = T.cuda.FloatTensor
+        conv_model = Model(nZ,H,W,n_embedding,prev_frames,next_frames, tensor=tensor)
         conv_model.cuda()
         if multi_gpu:
             conv_model = nn.DataParallel(conv_model)
@@ -109,34 +118,39 @@ def main(tyh5_path, model, dataset,
         # log params
 
         with mlflow.start_run():
-            mlflow.log_param("tyh5_path", tyh5_path)
             nParams = np.sum([np.prod(x.shape) for x in conv_model.parameters()])
-            mlflow.log_param("nParams", nParams)
+            # TODO make automatic, perhaps by using mlflow run
+            mlflow.log_params({
+                "nParams": nParams,
+                "tyh5_path": tyh5_path,
+                "model": model,
+                "dataset": dataset,
+                "prev_frames": prev_frames,
+                "next_frames": next_frames,
+                "kl_lambda": kl_lambda,
+                "sparse_lambda": sparse_lambda,
+                "lr": lr,
+                "n_epochs": n_epochs,
+                "n_embedding": n_embedding,
+                "batch_size": batch_size,
+                "multi_gpu": multi_gpu,
+                "gpus": gpus,
+                "seed": seed
+            })
             print("total num params:", nParams)
 
             if model=="kSVD":
-                avg_Y_loss, avg_Y_valid_loss = train(conv_model,train_data,test_data,nepochs,lr=lr,
+                avg_Y_loss, avg_Y_valid_loss = train(conv_model,train_data,test_data,n_epochs,lr=lr,
                     sparse_lambda=sparse_lambda, half=half, cuda=cuda)
             elif model=="skip" or model=="freeze":
-                avg_Y_loss, avg_Y_valid_loss = train(conv_model,train_data,test_data,nepochs,lr=lr, kl_lambda=1e-3, half=half, cuda=cuda, batch_size=batch_size, num_workers=num_workers)
+                avg_Y_loss, avg_Y_valid_loss = train(conv_model,train_data,test_data,n_epochs,lr=lr, kl_lambda=1e-3, half=half, cuda=cuda, batch_size=batch_size, num_workers=num_workers)
 
             now = datetime.datetime.today().strftime('%y%m%d-%I:%M%p')
 
-            model_name = "/data2/trained_models/{}_{}_{}_X=t-4:t_Y=t+1,t+5_epochs={}".format(now, f.fishid, model, nepochs) +     "_Y_MSE={:.3E}_Y_val_MSE={:.3E}".format(avg_Y_loss, avg_Y_valid_loss)
+            mlflow.pytorch.log_model(conv_model, "models")
 
-
-            T.save(conv_model.state_dict(),model_name+".pt")
-            mlflow.pytorch.log_model(conv_model)
-            print("Saved "+model_name+".pt")
-
-            frame = makePredVideo(conv_model,train_data,name=model_name+'_train')
-            makePredVideo(conv_model,train_data,name=model_name+'_test')
-
-
-
-
-        
-
+            # frame = makePredVideo(conv_model,train_data,name=model_name+'_train')
+            # makePredVideo(conv_model,train_data,name=model_name+'_test')
 
 if __name__ == '__main__':
     main()

@@ -1,0 +1,71 @@
+#! /usr/bin/env nix-shell
+#! nix-shell -I nixpkgs=https://github.com/tbenst/nixpkgs/archive/a6d77b1403caaf46f19223eab8638f55927f56e2.tar.gz
+#! nix-shell ../default.nix -i python
+# %%
+# %%
+import click, h5py, os, datetime, mlflow, itertools, torch, gc, dill, cv2
+import requests, tifffile
+import babelfish as bf, torch as T, numpy as np
+from mlflow.tracking import MlflowClient
+from torch.utils.data import DataLoader
+
+# %%
+# %%
+# mlflow.pytorch.load_model(
+
+# run_id = "4bf05f808c6a4e11817b5d3048c958fa"
+@click.command()
+@click.argument("run_id", type=str)
+@click.option("--device_id", type=str)
+@click.option("--seed", type=str, default=24)
+@click.option("--batch-size", type=int, default=64)
+@click.option("--artifact-path", type=str, default="/models")
+def main(run_id, device_id, seed, batch_size, artifact_path):
+    """Create avg 'receptive field' for each pixel
+    
+    Arguments:
+        run_id {str} -- i.e. 'cuda:1'
+    """    
+    T.manual_seed(seed)
+    np.random.seed(seed)
+    run =  MlflowClient().get_run(run_id)
+    model = bf.helpers.load_model_from_run_info(run.info,
+        artifact_path=artifact_path)
+    params = run.data.params
+    metrics = run.data.metrics
+    tyh5_path = params["tyh5_path"]
+    with h5py.File(tyh5_path, 'r', swmr=True) as tyh5:
+        imaging = tyh5[params["dataset"]]
+        nFrames, nZ, H, W = imaging.shape
+        volume_shape = imaging[0].shape
+        # TODO should coordinate this with mlflow--log train ids?
+        tvt_split = bf.helpers.train_test_split(nFrames, nchunks=20)
+        test_data = bf.data.ZebraFishData(imaging, {},
+            tvt_split['test'], int(params["prev_frames"]),int(params["next_frames"]))
+
+        dataloader = DataLoader(test_data, batch_size=batch_size, shuffle=False)
+        
+        
+        fname, ext = os.path.splitext(tyh5_path)
+        fname, ext = os.path.splitext(fname)
+        tif_path = fname+'_grad.btf'
+        print("creating", tif_path)
+        maxT = imaging[0:5000:10].max(0)
+        # TODO why can't imagej open bigtiff?
+        tifffile.imsave(fname+'_maxT.btf', maxT)
+        with tifffile.TiffWriter(tif_path, bigtiff=False) as tif:
+            for i in range(100,H,5):
+                for j in range(50,W,10):
+                    grad = T.zeros(volume_shape)
+                    grad[:,i:i+5,j:j+5] = 1
+                    avg_mask = bf.interpret.avg_backprop_gradient_mask(model, dataloader,
+                        grad, progress=True)
+                    avg_mask = avg_mask.max(0)[0].cpu().numpy() # maxTime projection
+                    tif.save(avg_mask)
+                if j > 150:
+                    break 
+        
+    
+
+if __name__ == '__main__':
+    main()
