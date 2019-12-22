@@ -46,5 +46,28 @@ nix copy --to 's3://nix-science?profile=nix-cache&region=us-west-2' nixpkgs.hell
 - fix environment.yml to use requirements.txt where possible?
 - delete S3 artifacts when removed from mlflow server
 - allow scripts to change while being able to retrieve default.nix for particular run_id (store default.nix in mlflow?? change to fetchFromGithub for babelfish, using niv)
+- support being able to run new visualization code when model definitions change
+  - refactor so models are in one package, and viz is in another? or support overriding models subpackage from another SHA??
+- upload movies / frames as artifacts on S3? Host my own data explorer?
+
+- ` chunks=True` for h5, 
     - 
 - mypy linting
+
+# Projects:
+
+## Jupyter notebook
+- depends on hydra
+- create easy nix script to run notebook
+- OR host a server / spin one up on AWS on request / Colab??
+
+## Hydra
+- get running on AWS
+- create instructions for caching
+
+## Airflow
+- https://airflow.apache.org/docs/stable/howto/initialize-database.html
+    - scheduler & server on mlflow box
+    - worker on colfax3/4/helius (creates all tyh5 files)
+    - rsync *.h5 back to lensman?
+    - primary blob on lensman, one-way no-overwrite backup to Oak

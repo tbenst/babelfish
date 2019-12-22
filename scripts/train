@@ -1,5 +1,5 @@
 #! /usr/bin/env nix-shell
-#! nix-shell -I nixpkgs=https://github.com/tbenst/nixpkgs/archive/a6d77b1403caaf46f19223eab8638f55927f56e2.tar.gz
+#! nix-shell -I nixpkgs=https://github.com/tbenst/nixpkgs/archive/07be0186f298e5b16897a168eae6ab01a5540fc4.tar.gz
 #! nix-shell ../default.nix -i python
 import click, h5py, os, datetime, mlflow, itertools, torch, gc, dill, cv2
 import mlflow.pytorch

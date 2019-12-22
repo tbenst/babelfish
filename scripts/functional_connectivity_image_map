@@ -1,11 +1,14 @@
 #! /usr/bin/env nix-shell
-#! nix-shell -I nixpkgs=https://github.com/tbenst/nixpkgs/archive/a6d77b1403caaf46f19223eab8638f55927f56e2.tar.gz
+#! nix-shell -I nixpkgs=https://github.com/tbenst/nixpkgs/archive/07be0186f298e5b16897a168eae6ab01a5540fc4.tar.gz
 #! nix-shell ../default.nix -i python
+# create output images for a functional connectivity map for each 
+# chunk of pixels, say 5x5.
 # %%
 # %%
 import click, h5py, os, datetime, mlflow, itertools, torch, gc, dill, cv2
 import requests, tifffile
 import babelfish as bf, torch as T, numpy as np
+import mlflow
 from mlflow.tracking import MlflowClient
 from torch.utils.data import DataLoader
 
@@ -20,12 +23,14 @@ from torch.utils.data import DataLoader
 @click.option("--seed", type=str, default=24)
 @click.option("--batch-size", type=int, default=64)
 @click.option("--artifact-path", type=str, default="/models")
-def main(run_id, device_id, seed, batch_size, artifact_path):
+@click.option("--experiment-name", type=str, default="babelfish")
+def main(run_id, device_id, seed, batch_size, artifact_path, experiment_name):
     """Create avg 'receptive field' for each pixel
     
     Arguments:
         run_id {str} -- i.e. 'cuda:1'
     """    
+    mlflow.set_experiment(experiment_name)
     T.manual_seed(seed)
     np.random.seed(seed)
     run =  MlflowClient().get_run(run_id)
@@ -64,7 +69,11 @@ def main(run_id, device_id, seed, batch_size, artifact_path):
                     tif.save(avg_mask)
                 if j > 150:
                     break 
-        
+        # TODO: log images artifacts in MLflow run
+        # with mlflow.start_run(run_id=run_id, ):
+        # TODO: also add jinja template & create HTML connectivity viz with
+        # Multivac
+
     
 
 if __name__ == '__main__':

@@ -50,11 +50,13 @@ buildPythonPackage rec {
     matplotlib
     mlflow
     moviepy
+    mypy # dev env
     nose
     numpy
     opencv3
     pandas
     pims
+    pylint # dev env
     pytest
     pytorch
     pytorch-lightning
