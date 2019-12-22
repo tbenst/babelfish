@@ -28,10 +28,10 @@
 }:
 
 buildPythonPackage rec {
-
   pname = "babelfish";
   version = "0.1.0";
   src = ./.;
+  
   doCheck = false;
   checkPhase = ''
     python -m unittest discover
