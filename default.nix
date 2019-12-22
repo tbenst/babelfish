@@ -1,3 +1,4 @@
+# this file defines the Nix package
 { lib, buildPythonPackage
 , bokeh
 , cython
