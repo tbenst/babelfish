@@ -29,7 +29,7 @@
 
 buildPythonPackage rec {
 
-  name = "babelfish";
+  pname = "babelfish";
   src = ./.;
   doCheck = false;
   checkPhase = ''
