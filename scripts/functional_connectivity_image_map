@@ -1,6 +1,6 @@
 #! /usr/bin/env nix-shell
 #! nix-shell -I nixpkgs=https://github.com/tbenst/nixpkgs/archive/07be0186f298e5b16897a168eae6ab01a5540fc4.tar.gz
-#! nix-shell ../default.nix -i python
+#! nix-shell ../shell.nix -i python
 # create output images for a functional connectivity map for each 
 # chunk of pixels, say 5x5.
 # %%
