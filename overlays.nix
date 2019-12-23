@@ -18,4 +18,4 @@
       nvenc = true; # nvidia support
     };
   })
-];
+]
