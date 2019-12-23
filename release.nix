@@ -7,9 +7,7 @@ let
       system = builtins.currentSystem;
       overlays = import ./overlays.nix;
     };
-  jobs = rec {
-    hello = pkgs.hello;
-    babelfish = pkgs.python3Package.babelfish;
-  };
-in
-  jobs
+in {
+  hello = pkgs.hello;
+  babelfish = pkgs.python3Package.babelfish;
+}
