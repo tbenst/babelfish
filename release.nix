@@ -14,6 +14,7 @@ let
         allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
           "cudnn_cudatoolkit_10"
           "cudatoolkit_10"
+          "cudatoolkit_10_1"
         ];
       };
     };
