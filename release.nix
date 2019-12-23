@@ -12,7 +12,7 @@ let
           issl
          ];
         allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
-          "cudnn_cudatoolkit_10"
+          "cudnn_cudatoolkit"
           "cudatoolkit"
         ];
       };
