@@ -6,7 +6,7 @@
           enableCuda = true;
           enableFfmpeg = true;
       };
-      babelfish = python-super.callPackage ./default.nix {}
+      babelfish = python-super.callPackage ./default.nix {};
     };
     python37 = super.python37.override {packageOverrides = self.pythonOverrides;};
     ffmpeg = super.ffmpeg-full.override {
