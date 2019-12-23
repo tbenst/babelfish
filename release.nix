@@ -7,7 +7,6 @@ let
       system = builtins.currentSystem;
       overlays = import ./overlays.nix;
       config = with pkgs.stdenv; {
-        allowUnfree = true;
         whitelistedLicenses = with lib.licenses; [
           unfreeRedistributable
           issl
