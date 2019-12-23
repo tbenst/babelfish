@@ -6,8 +6,8 @@ let
     "https://github.com/tbenst/nixpkgs/archive/${nixpkgsSHA}.tar.gz") {
       system = builtins.currentSystem;
       overlays = import ./overlays.nix;
-      config = {
-        whitelistedLicenses = with stdenv.lib.licenses; [
+      config = with pkgs.stdenv {
+        whitelistedLicenses = with lib.licenses; [
           unfreeRedistributable
           issl
          ];
