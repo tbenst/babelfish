@@ -9,5 +9,5 @@ let
     };
 in {
   hello = pkgs.hello;
-  babelfish = pkgs.python3Package.babelfish;
+  babelfish = pkgs.python3Packages.babelfish;
 }
