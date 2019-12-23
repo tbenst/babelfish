@@ -6,6 +6,16 @@ let
     "https://github.com/tbenst/nixpkgs/archive/${nixpkgsSHA}.tar.gz") {
       system = builtins.currentSystem;
       overlays = import ./overlays.nix;
+      config = {
+        whitelistedLicenses = with stdenv.lib.licenses; [
+          unfreeRedistributable
+          issl
+         ];
+        allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
+          "cudnn_cudatoolkit_10"
+          "cudatoolkit_10"
+        ];
+      };
     };
 in {
   hello = pkgs.hello;
