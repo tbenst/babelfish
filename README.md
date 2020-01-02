@@ -62,7 +62,6 @@ nix copy --to 's3://nix-science?profile=nix-cache&region=us-west-2' nixpkgs.hell
 - OR host a server / spin one up on AWS on request / Colab??
 
 ## Hydra
-- get running on AWS
 - create instructions for caching
 
 ## Airflow
