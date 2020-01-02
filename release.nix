@@ -6,8 +6,18 @@ let
     "https://github.com/tbenst/nixpkgs/archive/${nixpkgsSHA}.tar.gz") {
       system = builtins.currentSystem;
       overlays = import ./overlays.nix;
+      config = with pkgs.stdenv; {
+        whitelistedLicenses = with lib.licenses; [
+          unfreeRedistributable
+          issl
+         ];
+        allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
+          "cudnn_cudatoolkit"
+          "cudatoolkit"
+        ];
+      };
     };
 in {
-  hello = pkgs.hello;
+  # hello = pkgs.hello;
   babelfish = pkgs.python3Packages.babelfish;
 }
