@@ -1,3 +1,7 @@
+# Babelfish
+
+`release.nix` is for CI, `default.nix` is for nixpkgs, `nixpkgs.nix` pins nixpkgs.
+
 ## setup
 need to set following variables in .bashrc or similar, with actual username / password:
 ```
