@@ -2,6 +2,7 @@
 { lib, buildPythonPackage
 , babelfish-models
 , bokeh
+, boto3
 , cython
 , click
 , dill
@@ -43,6 +44,7 @@ buildPythonPackage rec {
   propagatedBuildInputs = [
     babelfish-models
     bokeh
+    boto3
     cython
     click
     dill
