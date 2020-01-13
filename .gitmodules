@@ -1,0 +1,3 @@
+[submodule "babelfish-models"]
+	path = babelfish-models
+	url = git@github.com:tbenst/babelfish-models.git

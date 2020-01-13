@@ -1,8 +1,11 @@
 # this file defines the Nix package
 { lib, buildPythonPackage
+, babelfish-models
 , bokeh
 , cython
+, click
 , dill
+# , ffmpeg
 , future
 , h5py
 , joblib
@@ -18,8 +21,6 @@
 , pytorch
 , pytorch-lightning
 , requests
-, scikitlearn
-, scikitimage
 , scipy
 , seaborn
 , tables
@@ -32,15 +33,18 @@ buildPythonPackage rec {
   pname = "babelfish";
   version = "0.1.0";
   src = ./.;
-  
   doCheck = false;
   checkPhase = ''
     python -m unittest discover
   '';
 
+  # nativeBuildInputs = [ ffmpeg ];
+
   propagatedBuildInputs = [
+    babelfish-models
     bokeh
     cython
+    click
     dill
     future
     h5py
@@ -57,8 +61,6 @@ buildPythonPackage rec {
     pytorch
     pytorch-lightning
     requests
-    scikitlearn
-    scikitimage
     scipy
     seaborn
     tables

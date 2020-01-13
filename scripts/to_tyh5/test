@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+"true" '''\'
+args="python $0 '"
+for a in "${@}"; do
+    args+=\"$a\"
+    args+=' '
+done
+args+="'"
+echo -e $args
+eval exec $args
+exec $args
+exit 0
+
+
+exec "$(which python)" ''$0 "${@}"''
+'''
+
+__doc__ = """module docstring"""
+import sys
+print(sys.argv)

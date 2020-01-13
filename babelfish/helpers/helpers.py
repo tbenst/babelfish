@@ -69,6 +69,23 @@ def gen_imaging(nT, nZ, H, W, half=False):
         dtype = np.float32
     return np.random.randint(0,3000,[nT,nZ,H,W]).astype(dtype)
 
+def resize_tiff_3d(images, fx, fy, interpolation=cv2.INTER_LINEAR, out="ndarray"):
+    # NOTE changed from images.asarray for each cv2.resize call
+    print("about to segfault", type(images[0]))
+    im = cv2.resize((images[0].asarray()), None, fx=fx, fy=fy, interpolation=interpolation)
+    print("no segfault")
+    if out=="ndarray":
+        new = np.zeros([images.shape[0],im.shape[0],im.shape[1]],
+            dtype=np.float32)
+    elif out=="memmap":
+        new = np.memmap("babelfish_temp_memmap.mmap", np.float32, "w+",
+            (images.shape[0],im.shape[0],im.shape[1]))
+    new[0] = im
+    for i, img in enumerate(images[1:]):
+        new[i] = cv2.resize(img.asarray(), None, fx=fx, fy=fy, interpolation=interpolation)
+    return new
+
+
 
 def resize_3d(images, fx, fy, interpolation=cv2.INTER_LINEAR, out="ndarray"):
     # NOTE changed from images.asarray for each cv2.resize call

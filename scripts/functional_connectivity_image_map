@@ -1,6 +1,5 @@
-#! /usr/bin/env nix-shell
-#! nix-shell -I nixpkgs=https://github.com/tbenst/nixpkgs/archive/07be0186f298e5b16897a168eae6ab01a5540fc4.tar.gz
-#! nix-shell ../shell.nix -i python
+#!/usr/bin/env bash
+"exec" "$(which nix-shell)" "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" "--run" "python $0 $*"
 # create output images for a functional connectivity map for each 
 # chunk of pixels, say 5x5.
 # %%

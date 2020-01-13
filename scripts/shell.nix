@@ -3,7 +3,6 @@ let
   secrets = import ./nix/secrets.nix;
   python-env = pkgs.python3.withPackages(ps: with ps; [
     babelfish
-    babelfish-models
     jupyter_core
     mypy
     pylint

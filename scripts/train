@@ -1,10 +1,11 @@
-#! /usr/bin/env nix-shell
-#! nix-shell -I nixpkgs=https://github.com/tbenst/nixpkgs/archive/07be0186f298e5b16897a168eae6ab01a5540fc4.tar.gz
-#! nix-shell ../shell.nix -i python
+#!/usr/bin/env bash
+"exec" "$(which nix-shell)" --pure "$(dirname ${BASH_SOURCE[0]})/../shell.nix" "--run" "python $0 $*"
+
 import click, h5py, os, datetime, mlflow, itertools, torch, gc, dill, cv2
 import mlflow.pytorch
 import math, resource
 import babelfish as bf
+import babelfish_models as bfm
 import torch as T
 import torch.nn.functional as F
 import torch.nn as nn
@@ -84,13 +85,13 @@ def main(tyh5_path, model, dataset,
     T.manual_seed(seed)
     np.random.seed(seed)
     if model=="skip":
-        from babelfish.model.deep_skip import DeepSkip, train
+        from bfm.deep_skip import DeepSkip, train
         Model = DeepSkip
     elif model=='kSVD':
-        from babelfish.model.deep_kSVD import Deep_KSVD, train
+        from bfm.deep_kSVD import Deep_KSVD, train
         Model = Deep_KSVD
     elif model=='freeze':
-        from babelfish.model.deep_freeze import DeepFreeze, train, trainBoth
+        from bfm.deep_freeze import DeepFreeze, train, trainBoth
         Model = DeepFreeze
         train = trainBoth
     cuda = True
