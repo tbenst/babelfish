@@ -57,18 +57,27 @@ def main(run_id, device_id, seed, batch_size, artifact_path, experiment_name):
         print("creating", tif_path)
         maxT = imaging[0:5000:10].max(0)
         # TODO why can't imagej open bigtiff?
-        tifffile.imsave(fname+'_maxT.btf', maxT)
-        with tifffile.TiffWriter(tif_path, bigtiff=False) as tif:
+        # tifffile.imsave(fname+'_maxT.btf', maxT)
+        H, W = maxT.shape
+        T = len(dataloader)
+        
+        frames = np.zeros((T,H,W))
+        
+        with tifffile.TiffWriter(tif_path, bigtif   f=False, imagej=True) as tif:
             for i in range(100,H,5):
                 for j in range(50,W,10):
                     grad = T.zeros(volume_shape)
                     grad[:,i:i+5,j:j+5] = 1
-                    avg_mask = bf.interpret.avg_backprop_gradient_mask(model, dataloader,
+                    mask = bf.interpret.batch_backprop_gradient_mask(model, dataloader,
                         grad, progress=True)
-                    avg_mask = avg_mask.max(0)[0].cpu().numpy() # maxTime projection
-                    tif.save(avg_mask)
+                    # mask = mask.max(0)[0].cpu().numpy() # maxTime projection
+                    mask = mask.cpu().numpy()
+                    for t in range(len(mask)):
+                        frames[t,i,j] = mask
+                        # tif.save(mask)
                 if j > 150:
                     break 
+            tifffile.save(frames)
         # TODO: log images artifacts in MLflow run
         # with mlflow.start_run(run_id=run_id, ):
         # TODO: also add jinja template & create HTML connectivity viz with

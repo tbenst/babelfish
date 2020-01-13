@@ -25,7 +25,7 @@ def backprop_gradient_mask(model, batch, grad):
     xb_grad = xb.grad.detach()
     return xb_grad
 
-def avg_backprop_gradient_mask(model, dataloader, grad, progress=False):
+def batch_backprop_gradient_mask(model, dataloader, grad, progress=False):
     """For all batch, backprop gradient mask.
     
     grad should be Z x H x W"""    
@@ -36,4 +36,5 @@ def avg_backprop_gradient_mask(model, dataloader, grad, progress=False):
     res = []
     for batch in dataloader:
         res.append(backprop_gradient_mask(model, batch, grad))
+    # return max across all channels
     return T.cat(res).max(0)[0]
