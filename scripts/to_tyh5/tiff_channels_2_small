@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+"exec" "$(which nix-shell)" "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" "--run" "python $0 $*"
+# https://rosettacode.org/wiki/Multiline_shebang
+# https://github.com/NixOS/nix/issues/2470
+
+__doc__ = """Convert TIFF_PATHS to .ty.h5 imaging (TxCxZxHxW)"""
+
+#%%
+import sys
+
+if hasattr(__builtins__, '__IPYTHON__'):
+    sys.path.append("../../..")
+    import babelfish as bf
+    directory = "/data/dlab/masa/5690WT/"
+    ch1 = bf.helpers.glob_one_file(directory+"*Ch1*")
+    ch2 = bf.helpers.glob_one_file(directory+"*Ch2*")
+    sys.argv = ["masa_tiff_2_small", directory]
+else:
+    pass
+    import babelfish as bf
+
+import matplotlib
+matplotlib.use('Agg')
+
+import tifffile, click, re, os
+import numpy as np
+from babelfish.helpers import resize_3d, resize_4d
+from scipy.ndimage.filters import minimum_filter1d
+import h5py
+
+from functools import partial
+from moviepy.video.io.bindings import mplfig_to_npimage
+import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
+from typing import List
+# %%
+
+def resize_from_tiff_path(tiff_path):
+    tiffFile = tifffile.TiffFile(tiff_path)
+    tiff = tiffFile.series[0]
+    if len(tiff.shape)==3:
+        nframes, H, W = tiff.shape
+        assert H == 512 # TODO support other sizes
+        assert W == 512 # TODO support other sizes
+        print("resize")
+        # TODO may run out of memory - should do one tiff .asarray() at a time
+        newStack = resize_3d(tiff.asarray(), 0.5, 0.5)
+        newStack = newStack[:,None]
+        Z = 1
+    elif len(tiff.shape)==4:
+        Z, nframes, H, W = tiff.shape
+        assert H == 512 # TODO support other sizes
+        assert W == 512 # TODO support other sizes
+        newStack = resize_4d(tiff.asarray(), 0.5, 0.5)    
+    return newStack
+
+    
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+
+@click.command(context_settings=CONTEXT_SETTINGS)
+@click.argument("tiff_paths", type=click.Path(exists=True), nargs=-1)
+@click.option("-o", "--output-path", type=click.Path(exists=False),
+              help="a .ty.h5 file")
+@click.option("-l", "--channel-labels", type=str,
+              help='comma separated e.g. "PV (GCaMP),PyR (RCaMP)"')
+@click.option("-r", "--frame-rate", type=float, help="Hz")
+@click.option("-u", "--um-per-pixel", type=float)
+def tiff_channels_2_small(tiff_paths: List, output_path: str,
+                          channel_labels: str, frame_rate, um_per_pixel):
+    """Convert TIFF_PATHS to .ty.h5 imaging (TxCxZxHxW)
+    
+    TIFF_PATHS: one or more file paths of 3D/4D tiffs. Must be (TxWxH) or (TxZxWxH)
+    \f
+    Chose TxCxZxHxW for easy 3D spatial convolution
+    """
+    if len(tiff_paths)==0:
+        # print help and exit
+        ctx = click.get_current_context()
+        click.echo(ctx.get_help())
+        exit(0)
+    if output_path is None:
+        name, _ = os.path.splitext(tiff_paths[0])
+        name, _ = os.path.splitext(name) # handle two extensions
+        output_path = name + ".ty.h5"
+    print("open")
+    with h5py.File(output_path, 'w') as h5f:
+        print("now open")
+        newStack = resize_from_tiff_path(tiff_paths[0])
+        T, Z, H, W = newStack.shape
+        assert H==256
+        assert W==256
+        C = len(tiff_paths)
+        dset = h5f.create_dataset('imaging/small', shape=(T, C, Z, H, W))
+        dset.attrs['dimensions'] = "TCZHW"
+        
+        if frame_rate:
+            dset.attrs["frame_rate"] = frame_rate
+        
+        if um_per_pixel:
+            dset.attrs["um_per_pixel"] = um_per_pixel
+        
+        if channel_labels:
+            channel_labels = channel_labels.split(",")
+            for i, label in enumerate(channel_labels):
+                dset.attrs[f"channel_{i}"] =  label
+        dset[:,0] = newStack
+
+        for i, tp in enumerate(tiff_paths[1:],1):
+            newStack = resize_from_tiff_path(tp)
+            dset[:,i] = newStack
+
+if __name__ == '__main__':
+    
+    print("argv", sys.argv)
+    tiff_channels_2_small()

@@ -9,7 +9,7 @@
 
     // "nixEnvSelector.nixShellConfig": "~/code/babelfish/default.nix",
     // "nixEnvSelector.nixShellConfig": "${workspaceRoot}/conda.nix",
-    "nixEnvSelector.nixShellConfig": "${workspaceRoot}/default.nix",
+    "nixEnvSelector.nixShellConfig": "${workspaceRoot}/shell.nix",
     "files.associations": {
         "main": "python",
         "btf_2_hdf5_small": "python",
@@ -49,7 +49,7 @@
         "[!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.]": "python",
         "[!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.]": "python"
     },
-    "python.pythonPath": "/home/tyler/.nix-profile/bin/python",
+    "python.pythonPath": "/nix/store/m345fvi8jr3p974pff18pzb6c8c7x4vy-python3-3.7.5-env/bin/python3.7",
     "python.linting.pylintEnabled": true,
     "python.linting.mypyEnabled": false,
     "python.linting.enabled": true

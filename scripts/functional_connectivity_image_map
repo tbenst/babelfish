@@ -1,16 +1,35 @@
-#! /usr/bin/env nix-shell
-#! nix-shell -I nixpkgs=https://github.com/tbenst/nixpkgs/archive/07be0186f298e5b16897a168eae6ab01a5540fc4.tar.gz
-#! nix-shell ../shell.nix -i python
+#!/usr/bin/env bash
+"exec" "$(which nix-shell)" "$(dirname ${BASH_SOURCE[0]})/../shell.nix" "--run" "python $0 $*"
 # create output images for a functional connectivity map for each 
 # chunk of pixels, say 5x5.
 # %%
 # %%
-import click, h5py, os, datetime, mlflow, itertools, torch, gc, dill, cv2
+import click, h5py, os, datetime, mlflow, itertools, torch, gc, dill, cv2, sys
 import requests, tifffile
+import babelfish
 import babelfish as bf, torch as T, numpy as np
 import mlflow
 from mlflow.tracking import MlflowClient
 from torch.utils.data import DataLoader
+
+import babelfish_models
+import babelfish_models.models
+import babelfish_models.volume
+import babelfish_models.resnet
+import babelfish_models.super_res
+import babelfish_models.misc
+babelfish.model = babelfish_models.models
+sys.modules['babelfish'] = babelfish # temp compatability hack TODO remove
+sys.modules['babelfish.model'] = babelfish.model # temp compatability hack TODO remove
+babelfish.volume = babelfish_models.volume
+sys.modules['babelfish.volume'] = babelfish.volume
+babelfish.resnet = babelfish_models.resnet
+sys.modules['babelfish.resnet'] = babelfish.resnet
+babelfish.super_res = babelfish_models.super_res
+sys.modules['babelfish.super_res'] = babelfish.super_res
+babelfish.misc = babelfish_models.misc
+sys.modules['babelfish.misc'] = babelfish.misc
+
 
 # %%
 # %%

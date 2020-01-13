@@ -106,4 +106,4 @@ venv.bak/
 # tyler
 *.mp4
 .ftpconfig
-secrets.nix
+nix/secrets.nix
