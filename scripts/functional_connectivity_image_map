@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 "exec" "$(which nix-shell)" "$(dirname ${BASH_SOURCE[0]})/../shell.nix" "--run" "python $0 $*"
-# create output images for a functional connectivity map for each 
-# chunk of pixels, say 5x5.
+
+__doc__ = """
+    create output images for a functional connectivity map for each 
+    chunk of pixels, say 5x5.
+"""
 # %%
 # %%
 import click, h5py, os, datetime, mlflow, itertools, torch, gc, dill, cv2, sys
@@ -74,29 +77,37 @@ def main(run_id, device_id, seed, batch_size, artifact_path, experiment_name):
         fname, ext = os.path.splitext(fname)
         tif_path = fname+'_grad.btf'
         print("creating", tif_path)
-        maxT = imaging[0:5000:10].max(0)
+        maxT = imaging[0:5000:10].max(0)[0]
         # TODO why can't imagej open bigtiff?
         # tifffile.imsave(fname+'_maxT.btf', maxT)
+        print("maxT", maxT.shape)
         H, W = maxT.shape
-        T = len(dataloader)
+        nT = len(test_data)
         
-        frames = np.zeros((T,H,W))
+        prev_frames = int(params["prev_frames"])
+        irange = range(100,150,25)
+        # irange = range(100,H,25)
+        jrange = range(100,150,25)
+        # jrange = range(50,W,25)
+        nBackProps = len(irange)*len(jrange)
+        # frames = np.zeros((nBackProps, nT,prev_frames, nZ, H,W))
         
-        with tifffile.TiffWriter(tif_path, bigtif   f=False, imagej=True) as tif:
-            for i in range(100,H,5):
-                for j in range(50,W,10):
+        with tifffile.TiffWriter(tif_path, bigtiff=False) as tif:
+            index = 0
+            for i in irange:
+                for j in jrange:
                     grad = T.zeros(volume_shape)
                     grad[:,i:i+5,j:j+5] = 1
                     mask = bf.interpret.batch_backprop_gradient_mask(model, dataloader,
                         grad, progress=True)
                     # mask = mask.max(0)[0].cpu().numpy() # maxTime projection
                     mask = mask.cpu().numpy()
-                    for t in range(len(mask)):
-                        frames[t,i,j] = mask
-                        # tif.save(mask)
-                if j > 150:
+                    # frames[index] = mask
+                    tif.save(mask)
+                    index += 1 
+                if j > 100:
                     break 
-            tifffile.save(frames)
+            # tifffile.save(frames)
         # TODO: log images artifacts in MLflow run
         # with mlflow.start_run(run_id=run_id, ):
         # TODO: also add jinja template & create HTML connectivity viz with

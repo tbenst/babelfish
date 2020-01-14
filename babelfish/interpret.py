@@ -36,5 +36,4 @@ def batch_backprop_gradient_mask(model, dataloader, grad, progress=False):
     res = []
     for batch in dataloader:
         res.append(backprop_gradient_mask(model, batch, grad))
-    # return max across all channels
-    return T.cat(res).max(0)[0]
+    return T.cat(res)

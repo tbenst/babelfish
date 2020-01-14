@@ -9,7 +9,7 @@ MLFLOW_TRACKING_PASSWORD = os.environ.get("MLFLOW_TRACKING_PASSWORD")
 def load_model_from_run_info(run_info, cuda=True, device_id=None,
     artifact_path="/models"):
     # TODO cache this / wrap all mlflow with some sort of memoization?
-    # have babelfish-specific cache folder
+    # have babelfish-specific cache folder in $XDG_CACHE_HOME
     """Load pytorch model from mlflow URI
     
     Arguments:
