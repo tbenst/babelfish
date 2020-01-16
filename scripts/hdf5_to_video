@@ -39,6 +39,7 @@ def hdf5_to_video(hdf5_file: str, dataset: str, quality, codec, pix_format,
     # scripts/hdf5_to_video /data/dlab/zfish_2p/20191101_6f/f2_e1_FishVR.mat "/gROI" benchmark at 205.88 it/s
     with h5py.File(hdf5_file, 'r', swmr=True) as h5:
         imaging = h5[dataset]
+        print(f"found {imaging.shape[0]} frames")
         assert len(imaging.shape)==4
         assert imaging.shape[1]==1 # empty dim
         

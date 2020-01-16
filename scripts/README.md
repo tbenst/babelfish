@@ -1,5 +1,16 @@
+## common
+```
+for f in $(ls *.mat); do ~/code/babelfish/scripts/hdf5_to_video $f "/gROI"; done
+```
+
+
+## shebang woes
+
 Curent solution does not allow `()` but does allow `"`
 nix-shell Scripts are a PITA. Here's the approaches that I tried.
+
+
+
 
 (runner-up)
 ```

@@ -22,9 +22,20 @@
   (self: super: {
 
     pythonOverrides = python-self: python-super: {
-      babelfish = python-super.callPackage ../default.nix {};
+      babelfish = python-super.callPackage ../babelfish/default.nix {};
 
       babelfish-models = python-super.callPackage ../babelfish-models/default.nix {};
+
+      stytra = python-super.stytra.overrideAttrs(old: rec {
+        pname = "stytra";
+
+        version = "0.8.27";
+
+        src = python-super.fetchPypi {
+          inherit pname version;
+          sha256 = "1xbxhmhkyrhf5z93s2qkircxykgdgd1j49ynngpc2zplfmgwmhcg";
+        };
+      });
 
       numpy = python-super.numpy.override { blas = super.mkl; };
 

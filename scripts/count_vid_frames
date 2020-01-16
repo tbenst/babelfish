@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+"true" '''\'
+exec nix-shell "$(dirname ${BASH_SOURCE[0]})/../shell.nix" --run "$(printf '%q ' python "$0" "$@")"
+'''
+
+import av, click
+
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+
+@click.command(context_settings=CONTEXT_SETTINGS)
+@click.argument("mp4_file", type=click.Path(exists=True))
+def main(mp4_file: str):
+    """Count frames of .mp4"""
+    if mp4_file is None:
+        # print help and exit
+        ctx = click.get_current_context()
+        click.echo(ctx.get_help())
+        exit(0)
+    
+    frame_count = 0
+
+    container = av.open(mp4_file)
+
+    for frame in container.decode(video=0):
+        frame_count += 1
+        
+    print(f"number of frames: {frame_count}")
+
+if __name__ == '__main__':
+    main()
