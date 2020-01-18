@@ -1,72 +1,29 @@
-## common
+## shebang
+
+WINNER:
 ```
-for f in $(ls *.mat); do ~/code/babelfish/scripts/hdf5_to_video $f "/gROI"; done
-```
-
-
-## shebang woes
-
-Curent solution does not allow `()` but does allow `"`
-nix-shell Scripts are a PITA. Here's the approaches that I tried.
-
-
-
-
-(runner-up)
-```
-args="'python \"$0\" "${@}" '"
-eval exec "$(which nix-shell)" "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" --run $nx
-```
-
 #!/usr/bin/env bash
 "true" '''\'
-# eval exec "$(which nix-shell)" "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" --run 'python /home/tyler/code/babelfish/scripts/to_tyh5/tiff_channels_2_small "-l" "PV (GCaMP),PyR (RCaMP)" "-u" "1.13671875" "-r" "7.47" "5690_990nm_Ave4_z353_pw550-000_Ch1.tif" "5690_990nm_Ave4_z353_pw550-000_Ch2.tif"'
-
-args="'python \"$0\""
-for a in "${@}"; do
-    args+=' '
-    args+=\"$a\"
-done
-args+="'"
-echo -e $args
-# eval "'python' \"$0\" \"${@}\""
-# pp="'python' \"$0\" "${@}" "
-# eval $pp
-nx="'python \"$0\" "${@}" '"
-# eval exec "$(which nix-shell)" "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" --run $nx
-eval exec "$(which nix-shell)" "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" --run $nx
-exit 0
-
-eval $args
-eval exec "$(which nix-shell)" --pure "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" --run $args
-exit 1
-
-# :)
-eval "$(which nix-shell)" --pure "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" --run '"python $0"'
-'eval "$(which nix-shell)" --pure "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" --run "python $0"'
-exec "$(which nix-shell)" --pure "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" --run 'python /home/tyler/code/babelfish/scripts/to_tyh5/tiff_channels_2_small'
-exec "$(which nix-shell)" --pure "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" --run "python $0"
-
-# :(
-exec "$(which nix-shell)" --pure "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" --run "python $0 ${[@]}"
-eval "$(which nix-shell)" --pure "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" --run python $0 "${@}"
-a="python $0" && 'exec "$(which nix-shell)" --pure "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" --run "\'$a\'"
-a="python $0" && 'exec "$(which nix-shell)" --pure "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" --run "$a"
-exec "$(which nix-shell)" --pure "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" --run $(echo '"python /home/tyler/code/babelfish/scripts/to_tyh5/tiff_channels_2_small"')
-exec "$(which nix-shell)" --pure "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" --run ''"python" $0 "${@}"''
-exec "$(which nix-shell)" --pure "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" --run "'python $0'"
-exec "$(which nix-shell)" --pure "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" --run \'"python $0"\'
-
-
-# exec "$(which nix-shell)" "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" --run \'"python $0 \"$1\" \"$2\" \"$3\" "\'
-
-
-
-# # works
-# exec "$(which nix-shell)" "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" --run "$(echo python ~/code/babelfish/scripts/to_tyh5/tiff_channels_2_small -l \"PV (GCaMP),PyR (RCaMP)\" -u 1.13671875 -r 7.47 *.tif)"
-exec "$(which nix-shell)" "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" --run 'python ~/code/babelfish/scripts/to_tyh5/tiff_channels_2_small -l "PV (GCaMP),PyR (RCaMP)" -u 1.13671875 -r 7.47 *.tif'
-# # works
-
-# ''"python" $0 "${@}"''
-
+exec nix-shell "$(dirname ${BASH_SOURCE[0]})/../shell.nix" --run "$(printf '%q ' python "$0" "$@")"
 '''
+```
+
+## TODO
+- package python-bioformats?
+- use tables for zstd
+```
+    with tables.open_file(output_path, 'w') as tyh5: 
+       h5.create_carray(h5.root, "test", tables.Int64Atom(), shape=(10,10), 
+           filters=tables.filters.Filters(complib='blosc:zstd'))
+```
+
+
+## temp
+for f in 20191017_6f/f1e1_*.oir 20191017_6f/f1e2_*.oir 20191017_6s/f3e1_*.oir 20191031_6f/f2_e1_*.oir 20191031_6f/f3_e1_*.oir 20191101_6f/f2_e1_*.oir 20191101_h2b/f1_e1_*.oir; do echo $(fd "$f"); done
+
+## Documentation
+need to `import tables` in order to use zstd with h5py
+
+
+~/code/babelfish/scripts/to_tyh5/tiffs_2_tyh5 -u 1 -c 3 20191101_h2b/f1_e1_6s_omr.ome.btf
+5:12 for first zplane!

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-"exec" "$(which nix-shell)" "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" "--run" "python $0 $*"
+"true" '''\'
+exec nix-shell "$(dirname ${BASH_SOURCE[0]})/../shell.nix" --run "$(printf '%q ' python "$0" "$@")"
+'''
 
 # TODO add support for NVENC https://github.com/Zulko/moviepy/issues/1014
 # TODO change to assume dim 4 as now part of imaging spec

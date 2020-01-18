@@ -1,0 +1,179 @@
+#!/usr/bin/env bash
+"true" '''\'
+exec nix-shell "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" --run "$(printf '%q ' python "$0" "$@")"
+'''
+# https://rosettacode.org/wiki/Multiline_shebang
+# https://github.com/NixOS/nix/issues/2470
+
+__doc__ = """Convert TIFF_PATHS to .ty.h5 imaging (TxCxZxHxW)"""
+
+#%%
+import sys
+
+if hasattr(__builtins__, '__IPYTHON__'):
+    sys.path.append("../../..")
+    import babelfish as bf
+    directory = "/data/dlab/masa/5690WT/"
+    ch1 = bf.helpers.glob_one_file(directory+"*Ch1*")
+    ch2 = bf.helpers.glob_one_file(directory+"*Ch2*")
+    sys.argv = ["masa_tiff_2_small", directory]
+else:
+    pass
+    import babelfish as bf
+
+import matplotlib
+matplotlib.use('Agg')
+
+import tifffile, click, re, os
+from tqdm import tqdm
+import numpy as np
+from babelfish.helpers import resize_3d, resize_4d, compression_opts
+from scipy.ndimage.filters import minimum_filter1d
+import h5py
+
+from functools import partial
+from moviepy.video.io.bindings import mplfig_to_npimage
+import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
+from typing import List
+# %%
+
+def resize_from_tiff(tiff):
+    tiff_shape = tiff.shape
+    if len(tiff_shape)==3:
+        _, H, W = tiff_shape
+        assert H == 512 # TODO support other sizes
+        assert W == 512 # TODO support other sizes
+        print("resize")
+        # TODO may run out of memory - should do one tiff .asarray() at a time
+        # memmap is too slow--streaming is better
+        newStack = resize_3d(tiff.asarray(), 0.5, 0.5)
+        newStack = newStack[:,None]
+    elif len(tiff_shape)==4:
+        _, _, H, W = tiff_shape
+        assert H == 512 # TODO support other sizes
+        assert W == 512 # TODO support other sizes
+        newStack = resize_4d(tiff.asarray(), 0.5, 0.5)    
+    return newStack
+
+def read_tiff_path(tiff_path):
+    tiff = tifffile.TiffFile(tiff_path)
+    assert len(tiff.series)==1 # we assume tiff.series[0] gets all data elsewhere
+    return tiff
+
+def assign_tiff_to_dset(dset, tiff, channel=0, batch_size=1024):
+    "dset is 5D TxCxZxHxW, tiff is either 3D TxHxW or 4D ZxTxHxW."
+    tiff_shape = tiff.series[0].shape
+    if len(tiff_shape)==3:
+        for b in tqdm(range(0,tiff_shape[0],batch_size)):
+            dset[b:b+batch_size,channel,0] = tiff.asarray(slice(b,b+batch_size))
+    elif len(tiff_shape)==4:
+        for z in tqdm(range(tiff_shape[0])):
+            nT = tiff_shape[1]
+            zIdx = slice(z*nT,(z+1)*nT)
+            dset[:,channel,z] = tiff.asarray(zIdx)
+            # ideally would use batching, but hard as tifffile does not support
+            # multidimensional indexing
+            # for b in tqdm(range(0,tiff_stack.shape[1],batch_size)):
+            #     new_stack = tiff_stack.asarray((z,slice(b,b+batch_size))).swapaxes(0,1)
+            #     dset[b:b+batch_size,channel,z] = new_stack
+    else:
+        raise(NotImplementedError("only supports 3 and 4 dim"))
+
+def assign_stack_to_dset(dset, tiff_stack, channel=0, batch_size=1024):
+    raise(NotImplementedError("only supports 3 and 4 dim"))
+    
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+
+@click.command(context_settings=CONTEXT_SETTINGS)
+@click.argument("tiff_paths", type=click.Path(exists=True), nargs=-1)
+@click.option("-o", "--output-path", type=click.Path(exists=False),
+              help="a .ty.h5 file")
+@click.option("-l", "--channel-labels", type=str,
+              help='comma separated e.g. "PV (GCaMP),PyR (RCaMP)"')
+@click.option("-r", "--frame-rate", type=float, help="Hz")
+@click.option("-s", "--small/--no-small", default=False, help="whether to make 256x256 images")
+@click.option("-c", "--compression-level", default=3, help="compression for zstd")
+@click.option("-u", "--um-per-pixel", type=float)
+def tiff_channels_2_tyh5(tiff_paths: List, output_path: str, small: bool,
+        channel_labels: str, frame_rate: float, um_per_pixel: float, compression_level: int):
+    """Convert TIFF_PATHS to .ty.h5 imaging (TxCxZxHxW)
+    
+    TIFF_PATHS: one or more file paths of 3D/4D tiffs. Must be (TxWxH) or (TxZxWxH)
+    
+    Each tiff will become a separate channel.
+    \f
+    Chose TxCxZxHxW for easy 3D spatial convolution
+    """
+    if len(tiff_paths)==0:
+        # print help and exit
+        ctx = click.get_current_context()
+        click.echo(ctx.get_help())
+        exit(0)
+    if output_path is None:
+        name, _ = os.path.splitext(tiff_paths[0])
+        name, _ = os.path.splitext(name) # handle two extensions
+        output_path = name + ".ty.h5"
+    with h5py.File(output_path, 'w') as tyh5:
+        print(f"opened {output_path}")
+        if not "version" in tyh5.attrs:
+            tyh5.attrs["version"] = "0.1.0"
+        
+        C = len(tiff_paths)
+
+        tiff = read_tiff_path(tiff_paths[0])
+        tiff_shape = tiff.series[0].shape
+        print("SHAPE", tiff_shape)
+        if len(tiff_shape)==3:
+            T, H, W = tiff_shape
+            Z = 1
+        elif len(tiff_shape)==4:
+            Z, T, H, W = tiff_shape
+        else:
+            raise(NotImplementedError(f"bad tiff ndims of {len(tiff_shape)}"))
+
+        dset_raw = tyh5.create_dataset('imaging/raw', shape=(T, C, Z, H, W),
+            **compression_opts(compression_level, 'blosc:zstd', True))
+        assign_tiff_to_dset(dset_raw, tiff, channel=0)
+        dset_raw.attrs['dimensions'] = "TCZHW"
+        
+        imaging_attrs = tyh5["imaging"].attrs
+        imaging_attrs['nFrames'] = T
+        imaging_attrs['nZ'] = Z
+        
+        if frame_rate:
+            imaging_attrs["frame_rate"] = frame_rate
+        
+        if um_per_pixel:
+            imaging_attrs["x_um_per_pixel"] = um_per_pixel
+            imaging_attrs["y_um_per_pixel"] = um_per_pixel
+            imaging_attrs["z_um_per_pixel"] = um_per_pixel
+        
+        if small:
+            print("resizing to small")
+            stack = resize_from_tiff(tiff)
+            T, Z, H, W = stack.shape
+            assert H==256
+            assert W==256
+            dset_small = tyh5.create_dataset('imaging/small', shape=(T, C, Z, H, W),
+                **compression_opts(compression_level, 'blosc:zstd', True))
+            dset_small.attrs['dimensions'] = "TCZHW"
+            assign_stack_to_dset(dset_small, tiff, channel=0)
+            
+        
+        if channel_labels:
+            channel_labels = channel_labels.split(",")
+            for i, label in enumerate(channel_labels):
+                dset_raw.attrs[f"channel_{i}"] =  label
+                if small:
+                    dset_small.attrs[f"channel_{i}"] =  label
+
+        for i, tp in tqdm(enumerate(tiff_paths[1:],1)):
+            tiff = read_tiff_path(tp)
+            assign_tiff_to_dset(dset_raw, tiff, channel=i)
+            if small:
+                stack = resize_from_tiff(tiff)
+                assign_stack_to_dset(dset_small, stack, channel=i)
+
+if __name__ == '__main__':
+    tiff_channels_2_tyh5()

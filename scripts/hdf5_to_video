@@ -1,13 +1,9 @@
 #!/usr/bin/env bash
 "exec" "$(which nix-shell)" "$(dirname ${BASH_SOURCE[0]})/../shell.nix" "--run" "python $0 $*"
 
-__doc__ = """
-    Convert .mat file gROI (aaron's fish_VR) tail to video
-    
-"""
-
-import av, h5py, click, os
+import h5py, click, os, numpy as np
 from tqdm import tqdm
+
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
@@ -18,13 +14,17 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option("-r", "--frame-rate", default=60, type=float, help="Hz")
 @click.option('-f', '--pix-format', default='gray8', help="pixel format")
 # @click.option('-b', '--bitrate', type=int, default=8000000)
-@click.option('-c', '--codec', default='libx264')
-@click.option('-q', '--quality', default='22', help="CRF quality")
-def hdf5_to_video(hdf5_file: str, dataset: str, quality, codec, pix_format,
-                          output_path: str, frame_rate: float):
+@click.option('-c', '--codec', default='libx265')
+@click.option('-q', '--quality', default='22', type=str, help="CRF quality")
+@click.option("--av", "lib", flag_value="av", default=True)
+@click.option("--moviepy", "lib", flag_value="moviepy")
+def hdf5_to_video(hdf5_file: str, dataset: str, quality: str, codec, pix_format,
+                          output_path: str, frame_rate: float, lib: float):
     """Convert HDF5_FILE["DATASET"] to [output_path], an .mp4 file.
     
-    Dataset must be 3D tensor."""
+    Dataset must be 3D tensor. Example: 
+    ~/code/babelfish/scripts/hdf5_to_video f2_e1_FishVR.mat  "/gROI"
+    """
     if hdf5_file is None or dataset is None:
         # print help and exit
         ctx = click.get_current_context()
@@ -35,33 +35,50 @@ def hdf5_to_video(hdf5_file: str, dataset: str, quality, codec, pix_format,
         name, _ = os.path.splitext(hdf5_file)
         name, _ = os.path.splitext(name)
         output_path = name + ".mp4"
-    # TODO try moviepy nvenc
-    # scripts/hdf5_to_video /data/dlab/zfish_2p/20191101_6f/f2_e1_FishVR.mat "/gROI" benchmark at 205.88 it/s
+    # scripts/hdf5_to_video /data/dlab/zfish_2p/20191101_6f/f2_e1_FishVR.mat "/gROI" x264 benchmark at 205.88 it/s
+    # x265 at 110.8 it/s
     with h5py.File(hdf5_file, 'r', swmr=True) as h5:
         imaging = h5[dataset]
         print(f"found {imaging.shape[0]} frames")
         assert len(imaging.shape)==4
         assert imaging.shape[1]==1 # empty dim
         
-        output = av.open(output_path, 'w')
-        stream = output.add_stream(codec, frame_rate)
-        # stream.bit_rate = bitrate
-        stream.pix_fmt = pix_format
-        stream.options = {'crf': quality}
+        if lib=="av":
+            import av
+            output = av.open(output_path, 'w')
+            stream = output.add_stream(codec, frame_rate)
+            # stream.bit_rate = bitrate
+            stream.pix_fmt = pix_format
+            stream.options = {'crf': quality}
 
+            for array in tqdm(imaging):
+                frame = av.VideoFrame.from_ndarray(array[0], format='gray8')
+                for packet in stream.encode(frame):
+                    output.mux(packet)
+            
+            # flush to disk
+            for packet in stream.encode():
+                output.mux(packet)
+            output.close()
+            
+        elif lib=="moviepy":
+            import moviepy.editor as mpy
+            global c
+            c = 0
+            print("imaging", imaging.shape)
+            def make_frame(t):
+                global c
+                frame = np.repeat(np.array(imaging[c,0])[:,:,None],3,axis=2)
+                c += 1
+                return frame 
+            fps = 60
+            duration = len(imaging)/fps
+            clip = mpy.VideoClip(make_frame, duration = duration)
 
-        for array in tqdm(imaging):
-            frame = av.VideoFrame.from_ndarray(array[0], format='gray8')
-            packet = stream.encode(frame)
-            output.mux(packet)
-        
-        # import moviepy as mpy
-        # clip = mpy.ImageSequenceClip(imaging[:,0],
-        #                              fps=60)
-        # # clip = mpy.ImageSequenceClip(np.repeat(imaging[:,0,:,None],3,axis=2),
-        # clip.write_videofile(output_path, codec='nvenc')
+            clip.write_videofile(output_path, fps=fps, codec=codec,
+                ffmpeg_params=['-crf', quality])
+    
     print("created video at " + output_path)
-    output.close()
 
 if __name__ == '__main__':
     hdf5_to_video()

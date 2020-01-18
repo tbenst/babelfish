@@ -10,10 +10,11 @@ let
       apache-airflow
       babelfish
       babelfish-models
-      jupyter_core
+      jupyter
       mypy
       pylint
       stytra
+      seqnmf
     ];
     ignoreCollisions = true;
   };
@@ -27,6 +28,10 @@ mkShell {
     # QT_PLUGIN_PATH = "${qt4}/${qt4.qtPluginPrefix}";
     # openGL workaround https://github.com/guibou/nixGL/blob/master/default.nix
     # LD_LIBRARY_PATH="${libglvnd}/lib:${nvidiaLibsOnly}/lib:\$LD_LIBRARY_PATH";
-    buildInputs = [ python-env ffmpeg ];
+    buildInputs = [
+      python-env
+      ffmpeg
+      zstd
+    ];
     # nativeBuildInputs = [ qt4.wrapQtAppsHook ];
 }

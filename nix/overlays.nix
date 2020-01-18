@@ -25,6 +25,8 @@
       babelfish = python-super.callPackage ../babelfish/default.nix {};
 
       babelfish-models = python-super.callPackage ../babelfish-models/default.nix {};
+      
+      seqnmf = python-super.callPackage ./packages/seqnmf.nix {};
 
       stytra = python-super.stytra.overrideAttrs(old: rec {
         pname = "stytra";
