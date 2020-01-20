@@ -6,4 +6,4 @@ def glob_one_file(path):
         return results[0]
     else:
         print("found " + str(len(results)) + " files instead of one for " + path)
-        return ""
+        return results

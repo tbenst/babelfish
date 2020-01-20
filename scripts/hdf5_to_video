@@ -1,29 +1,69 @@
 #!/usr/bin/env bash
-"exec" "$(which nix-shell)" "$(dirname ${BASH_SOURCE[0]})/../shell.nix" "--run" "python $0 $*"
+"true" '''\'
+exec nix-shell --pure "$(dirname ${BASH_SOURCE[0]})/../shell.nix" --run "$(printf '%q ' python "$0" "$@")"
+'''
 
-import h5py, click, os, numpy as np
+import tables, h5py, click, os, av, numpy as np
 from tqdm import tqdm
+import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
+from functools import partial
+from moviepy.video.io.bindings import mplfig_to_npimage
 
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+
+
+cdict = {'red':   [[0.0,  0.0, 0.0],
+                   [1.0,  0.0, 0.0]],
+         'green': [[0.0,  0.0, 0.0],
+                   [1.0,  1.0, 1.0]],
+         'blue':  [[0.0,  0.0, 0.0],
+                   [1.0,  0.0, 0.0]]}
+cmap_gfp = LinearSegmentedColormap('gfp', segmentdata=cdict, N=256)
+
+def make_mpl_frame(array,fig, ax,vmin=0,vmax=1):
+    ax.clear()
+    im = ax.imshow(array,vmin=vmin, vmax=vmax, cmap=cmap_gfp)
+    return mplfig_to_npimage(fig)
+
+
+def uint16_to_rgb(array, dset_min, dset_max):
+    frame = np.zeros((*array.shape,3),dtype=np.uint8)
+    array_scaled = 255*(array.astype(np.float64)-dset_min)/(dset_max-dset_min)
+    np.clip(array_scaled, 0, 255, out=array_scaled)
+    # green only
+    frame[:,:,1] = array_scaled.astype(np.uint8)
+    return frame
 
 @click.command(context_settings=CONTEXT_SETTINGS)
 @click.argument("hdf5_file", type=click.Path(exists=True))
 @click.argument("dataset", type=str)
 @click.argument("output_path", type=click.Path(exists=False), required=False)
 @click.option("-r", "--frame-rate", default=60, type=float, help="Hz")
-@click.option('-f', '--pix-format', default='gray8', help="pixel format")
-# @click.option('-b', '--bitrate', type=int, default=8000000)
-@click.option('-c', '--codec', default='libx265')
-@click.option('-q', '--quality', default='22', type=str, help="CRF quality")
-@click.option("--av", "lib", flag_value="av", default=True)
-@click.option("--moviepy", "lib", flag_value="moviepy")
+@click.option('-f', '--pix-format', default='yuv420p', help="pixel format")
+@click.option('-l', '--codec', default='h264_nvenc')
+@click.option('-g', '--gpu', default="1", help="GPU ID to use")
+@click.option('-c', '--channel', type=int, default=0)
+@click.option('-m', '--max-z/--no-max-z', default='False', help="max-Z projection")
+@click.option('-s', '--subtract', default=None, help="subtract percentile")
+@click.option('-z', '--z-plane', type=int, help="which z-plane to use")
+@click.option('-n', '--max-frames', type=int, help="max number of frames to create")
+@click.option('-i', '--vmin-percent', type=float, default=5, help="% for colormap")
+@click.option('-a', '--vmax-percent', type=float, default=99, help='% for colormap')
+@click.option('-q', '--quality', default='22', type=str,
+              help="CRF quality, 27 is crappy for Calcium imaging")
+@click.option('-p', '--colormap/--no-colormap', default=False,
+              help="Linear colormap with matplotlib")
 def hdf5_to_video(hdf5_file: str, dataset: str, quality: str, codec, pix_format,
-                          output_path: str, frame_rate: float, lib: float):
+    output_path: str, frame_rate: float, max_z, z_plane, max_frames,
+    channel, colormap, subtract, vmin_percent, vmax_percent, gpu):
     """Convert HDF5_FILE["DATASET"] to [output_path], an .mp4 file.
     
-    Dataset must be 3D tensor. Example: 
-    ~/code/babelfish/scripts/hdf5_to_video f2_e1_FishVR.mat  "/gROI"
+    Dataset must be 3D tensor or 4D tensor. For 4D tensor, must specify --max-z,
+    or --z-plane.
+    
+    Example: ~/code/babelfish/scripts/hdf5_to_video f2_e1_FishVR.mat  "/gROI"
     """
     if hdf5_file is None or dataset is None:
         # print help and exit
@@ -37,46 +77,85 @@ def hdf5_to_video(hdf5_file: str, dataset: str, quality: str, codec, pix_format,
         output_path = name + ".mp4"
     # scripts/hdf5_to_video /data/dlab/zfish_2p/20191101_6f/f2_e1_FishVR.mat "/gROI" x264 benchmark at 205.88 it/s
     # x265 at 110.8 it/s
-    with h5py.File(hdf5_file, 'r', swmr=True) as h5:
-        imaging = h5[dataset]
+    with tables.open_file(hdf5_file, 'r', swmr=True) as h5:
+        imaging = h5.root[dataset]
         print(f"found {imaging.shape[0]} frames")
-        assert len(imaging.shape)==4
-        assert imaging.shape[1]==1 # empty dim
+        if max_z or z_plane:
+            assert len(imaging.shape)==5
+        else:
+            is_one_plane = imaging.shape[2]==1
+            if is_one_plane:
+                z_plane = 0
+            else:
+                assert len(imaging.shape)==4
+        assert imaging.shape[1]==1 # empty channel dim
+        H, W = np.array(imaging.shape)[[-2,-1]]
         
-        if lib=="av":
-            import av
-            output = av.open(output_path, 'w')
-            stream = output.add_stream(codec, frame_rate)
-            # stream.bit_rate = bitrate
-            stream.pix_fmt = pix_format
-            stream.options = {'crf': quality}
+        output = av.open(output_path, 'w')
+        # output.options = {'gpu': gpu}
+        stream = output.add_stream(codec, frame_rate)
+        # stream.bit_rate = bitrate
+        stream.pix_fmt = pix_format
+        stream.options = {'crf': quality, 'gpu': gpu}
+        
+        if max_z:
+            temp_array = imaging[0:500,channel].max(1)
+        elif z_plane is not None:
+            temp_array = imaging[0:500,channel,z_plane]
+        else:
+            temp_array = imaging[0:500,channel]
+                
+        if subtract:
+            min_frame = np.percentile(temp_array,subtract, axis=0)
+            zero_frame = np.zeros_like(min_frame)
+            temp_array = temp_array-min_frame
+            temp_array = np.clip(0, temp_array.max(), temp_array)
+            print("min_frame sum", min_frame.sum())
+            print("frame sum", temp_array[0].sum())
+        if colormap:
+            fig, ax = plt.subplots(figsize=(W/16,H/16))
+            ax.set_axis_off()
+        vmax = np.percentile(temp_array, vmax_percent)
+        vmin = np.percentile(temp_array, vmin_percent)
+        # else:
+            # the_min = imaging.min()
+            # the_max = imaging.max()
 
-            for array in tqdm(imaging):
-                frame = av.VideoFrame.from_ndarray(array[0], format='gray8')
-                for packet in stream.encode(frame):
-                    output.mux(packet)
-            
-            # flush to disk
-            for packet in stream.encode():
+        del temp_array
+        
+        if max_frames:
+            total = min(imaging.shape[0],max_frames)
+        else:
+            total = imaging.shape[0]
+        for n, array in tqdm(enumerate(imaging),
+                             total=total):
+            if max_frames and n>=max_frames:
+                break
+            if max_z:
+                array_frame = array[channel].max(0)
+            elif z_plane:
+                array_frame = array[channel,z_plane]
+            else:
+                array_frame = array[channel]
+            if subtract:
+                array_frame = np.clip(0, array_frame.max(), array_frame)
+            if colormap:
+                array_frame = make_mpl_frame(array_frame, fig, ax, vmin, vmax)
+                # np_pix_format = "rgb24"
+            else:
+                array_frame = uint16_to_rgb(array_frame, vmin, vmax)
+                # np_pix_format = "gray8"
+            plt.imshow(array_frame)
+            # plt.savefig("test.png")
+            # break
+            frame = av.VideoFrame.from_ndarray(array_frame, format="rgb24")
+            for packet in stream.encode(frame):
                 output.mux(packet)
-            output.close()
-            
-        elif lib=="moviepy":
-            import moviepy.editor as mpy
-            global c
-            c = 0
-            print("imaging", imaging.shape)
-            def make_frame(t):
-                global c
-                frame = np.repeat(np.array(imaging[c,0])[:,:,None],3,axis=2)
-                c += 1
-                return frame 
-            fps = 60
-            duration = len(imaging)/fps
-            clip = mpy.VideoClip(make_frame, duration = duration)
-
-            clip.write_videofile(output_path, fps=fps, codec=codec,
-                ffmpeg_params=['-crf', quality])
+        
+        # flush to disk
+        for packet in stream.encode():
+            output.mux(packet)
+        output.close()
     
     print("created video at " + output_path)
 

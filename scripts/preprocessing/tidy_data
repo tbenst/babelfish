@@ -1,0 +1,212 @@
+#!/usr/bin/env bash
+"true" '''\'
+exec nix-shell --pure "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" --run "$(printf '%q ' python "$0" "$@")"
+'''
+__doc__ = """Process logs & tail tracking into tidy data"""
+import matplotlib
+matplotlib.use("Agg")
+import numpy as np, scipy, matplotlib.pyplot as plt, pandas as pd, os
+import h5py, tables, click
+import matplotlib.gridspec as gridspec
+import seaborn as sns
+from babelfish.helpers import glob_one_file
+from babelfish.behavior import extract_segments_above_thresh
+
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+@click.command(context_settings=CONTEXT_SETTINGS)
+@click.argument("experiment_directory", type=click.Path(exists=True), required=True)
+def main(experiment_directory):
+    experiment_directory = experiment_directory + '/'
+    mat_file = glob_one_file(experiment_directory+"raw/*FishVR.mat")
+    stytra_path = glob_one_file(experiment_directory+"tail/*FishVR.hdf5")
+    tyh5_path = glob_one_file(experiment_directory+"*.ty.h5")
+    assert type(mat_file)==str and type(stytra_path)==str \
+        and type(tyh5_path)==str
+    plot_prefix = experiment_directory + "plot/"
+    os.makedirs(plot_prefix, exist_ok=True)
+
+    with h5py.File(tyh5_path, 'r', swmr=True) as h5:
+        frame_rate = h5["/imaging"].attrs["frame_rate"]
+
+    # ### read data
+
+    tb = pd.read_hdf(stytra_path, 'data', mode='r')
+
+    nFrames = len(tb)
+
+    mat = h5py.File(mat_file, "r", swmr=True)
+    
+    if mat["gWaterVel"].shape[1]!=nFrames:
+        # TODO only necessary due to mistake in hdf5_to_video (can remove in future...)
+        print(f"warning: found {nFrames} frames from stytra but {mat['gWaterVel'].shape[1]} frames from the .mat. Truncating")
+    water_velocity = mat["gWaterVel"][:,:nFrames] # y,x
+    # UP on projector is forward for fish, left is left, right is right
+    # [15,0] -> up (forward)
+    # [-15,0] -> down (backward)
+    # [0,15] -> left
+    # [0,-15] -> right
+
+    time = np.arange(nFrames)/frame_rate
+
+
+    # ### construct masks for trial types
+
+    stytra_len = len(tb)
+    water_velocity = water_velocity[:,:stytra_len]
+
+    right_mask = (water_velocity[0] == 0) & (water_velocity[1] < 0)
+    left_mask = (water_velocity[0] == 0) & (water_velocity[1] > 0)
+    forward_mask = (water_velocity[0] > 0) & (water_velocity[1] == 0)
+    backward_mask = (water_velocity[0] < 0) & (water_velocity[1] == 0)
+    nomotion_mask = (water_velocity[0] == 0) & (water_velocity[1] == 0)
+
+    water_velocity.shape
+
+    # May not balanced due to bug in code in 2019 (extra left on 11/01)
+    mask_list = [forward_mask, backward_mask, left_mask, right_mask, nomotion_mask]
+    time_count = list(map(sum, mask_list))
+    min_time = np.min(time_count)
+    time_count
+
+    # TODO remove `< len(tb)` is a hack for the missing frames when
+    # hdf5_to_video had a PyAV (user) bug that truncated last 30-60 frames
+    # https://github.com/portugueslab/stytra/issues/30
+    idx_list = list(map(lambda x: np.where(x[x<len(tb)])[0], mask_list))
+
+
+    norm_idx_list = list(map(lambda i: i[np.random.choice(len(i), min_time, False)], idx_list))
+    norm_masks = []
+    for i,il in enumerate(norm_idx_list):
+        x = np.full(nomotion_mask.shape, False)
+        x[il] = True
+        norm_masks.append(x)
+        
+    norm_forward_mask, norm_backward_mask, norm_left_mask, norm_right_mask, norm_nomotion_mask = norm_masks
+
+    # https://stackoverflow.com/questions/26070514/how-do-i-get-the-index-of-a-specific-percentile-in-numpy-scipy
+    def percentile_idx(array, percentile):
+        """Given array, return index of element corresponding to percentile."""
+        idx = int(percentile/100 * (len(array) - 1)+0.5) # 25%
+        return np.argpartition(array, idx)[idx]
+
+    def closest_idx(array, val):
+        "Return idx of element that is closest to val"
+        return (np.abs(array - val)).argmin()
+
+
+    # ### trial DataFrame
+
+    # ### tail metrics (vigor, bouts, ...)
+    # http://www.portugueslab.com/stytra/overview/4_closed_loop.html?highlight=vigor
+    # std of tail_sum for 50ms (120 fps / 20 = 6)
+
+    vigor = tb.tail_sum.rolling(6).std()
+
+    plt.plot(time, vigor)
+    plt.title("Tail movement vigor")
+    plt.xlabel("time (s)")
+    plt.ylabel("std of tail angle (50ms)")
+    plt.savefig(plot_prefix+"vigor.svg")
+
+
+    # ### tail bouts
+
+    bouts, bout_is_connected = extract_segments_above_thresh(np.array(vigor),0.01)
+    len(bouts)
+
+    min_bout = np.array(list(map(lambda x: x[1]-x[0], bouts))).min()
+
+    # ### Tidy DataFrame munging
+
+    # take average nomotion_interval, dropping final few in case of early stop
+    nomotion_interval = np.diff(np.where(np.diff(nomotion_mask))[0])[0:-3:2].mean()
+    nomotion_interval
+    motion_interval = int(np.diff(np.where(np.diff(nomotion_mask))[0])[1:-3:2].mean())
+    pre_motion_interval = int(nomotion_interval/2)
+    post_motion_interval = int(nomotion_interval - pre_motion_interval)
+
+    # -1 is start of motion, 1 is end of motion
+    trial_transitions = np.diff(nomotion_mask.astype(np.int))
+    trial_transitions = np.insert(trial_transitions,0,0)
+    # a trial is pre_motion_interval, motion_interval, post_motion_interval
+    pretrial_transitions = np.roll(trial_transitions, -pre_motion_interval)
+    # trial number of each frame
+    trial_number = (pretrial_transitions==-1).cumsum()
+
+    # create time vector of relative time in the trial
+    trial_time = np.zeros_like(trial_number, dtype=float)
+    prev_trial = 0
+    for t in range(1,len(trial_time)):
+        new_trial = trial_number[t]
+        if new_trial==prev_trial:
+            # increment one relative frame number
+            trial_time[t] = trial_time[t-1]+1
+        else:
+            # trial start is relative time 0
+            trial_time[t] = 0
+        prev_trial = new_trial
+    trial_time /= frame_rate
+
+    assert pre_motion_interval == np.where(trial_transitions==-1)[0][0] - np.where(pretrial_transitions==-1)[0][0]
+
+
+    # ### DataFrame dtypes
+
+    # used as spec (not enforced...)
+    motion_type_list = ["no_motion", "forward", "backward", "left", "right"]
+    motion_dtype = pd.CategoricalDtype(motion_type_list, ordered=False)
+    # each trial has motion
+    trial_dtype = pd.CategoricalDtype(motion_type_list[1:], ordered=False)
+    metric_dtype = pd.CategoricalDtype(["vigor", "bout_duration"] + list(tb.columns), ordered=False)
+    tidy_cols = ["tail_metric", "value", "motion", "trial_number", "frame_num", "trial_time"]
+
+    motion = forward_mask*1 + backward_mask*2 + left_mask*3 + right_mask*4
+    motion = pd.Series([motion_type_list[m] for m in motion])#, dtype=motion_dtype) # remove cat for fixed compatability
+
+
+    # ### Create DataFrames
+    # we create multiple tidy dataframes with frame_num as the key
+
+    # add vigor to tidy_df
+    tail_metric = pd.Series(["vigor"]*nFrames, dtype=metric_dtype)
+    # len nFrames
+    frame_df = pd.DataFrame({"frame_num": np.arange(nFrames), "trial_number": trial_number,
+                            "motion": motion, "trial_time": trial_time, "time": time})
+
+    # len nTrials
+    trial_df = (frame_df.loc[frame_df.motion!="no_motion"].drop_duplicates("trial_number"))[["trial_number", "motion"]].rename(columns={"motion": "trial_type"})
+    trial_df["trial_type"] = trial_df["trial_type"].astype(trial_dtype)
+
+    # all metrics, starting with vigor
+    metric_df = pd.DataFrame({"metric": tail_metric, "value": vigor,
+                            "frame_num": np.arange(nFrames)})
+
+    # add bout with duration as value to metric_df
+    bout_duration = list(map(lambda x: (x[1]-x[0])/frame_rate, bouts))
+    bout_frame_num = map(lambda x: x[0], bouts)
+    bout_metric = pd.Series(["bout_duration"]*len(bout_duration), dtype=metric_dtype)
+    metric_df = metric_df.append(pd.DataFrame({"metric": bout_metric, "value": bout_duration,
+                                            "frame_num": bout_frame_num}))
+
+    # add tail_sum & thetas
+    for col in tb.columns:
+        print(f"adding {col}")
+        tail_metric = pd.Series([col]*nFrames, dtype=metric_dtype)
+        metric_df = metric_df.append(pd.DataFrame({"metric": tail_metric, "value": tb[col],
+                                                "frame_num": np.arange(nFrames)}))
+
+    bouts_df = pd.DataFrame({"start_frame_num": list(map(lambda x: x[0], bouts)),
+                            "end_frame_num": list(map(lambda x: x[1], bouts)),
+                            "is_connected": bout_is_connected})
+
+    os.makedirs(experiment_directory+"data_frames", exist_ok=True)
+
+    # save DataFrames
+    # TODO circa June 2020: switch to Arrow 1.0
+    frame_df.to_parquet(experiment_directory + '/data_frames/frame_df.parquet')
+    metric_df.to_parquet(experiment_directory + '/data_frames/metric_df.parquet')
+    trial_df.to_parquet(experiment_directory + '/data_frames/trial_df.parquet')
+    bouts_df.to_parquet(experiment_directory + '/data_frames/bouts_df.parquet')
+    
+if __name__ == "__main__":
+    main()

@@ -1,15 +1,14 @@
 #!/usr/bin/env bash
 "true" '''\'
-exec nix-shell "$(dirname ${BASH_SOURCE[0]})/../shell.nix" --run "$(printf '%q ' python "$0" "$@")"
+exec nix-shell --pure "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" --run "$(printf '%q ' python "$0" "$@")"
 '''
 
-# TODO add support for NVENC https://github.com/Zulko/moviepy/issues/1014
-# TODO change to assume dim 4 as now part of imaging spec
+# TODO change to assume dim 5 as now part of imaging spec
 #%%
-import click
+import click, os
 import numpy as np
 import babelfish as bf
-import h5py
+import tables
 from tqdm import tqdm
 
 
@@ -19,24 +18,30 @@ from tqdm import tqdm
     default="/imaging/motion_corrected")
 @click.argument("out_dataset", type=str, required=False,
     default="/imaging/motion_corrected_small")
-def main(h5_path, dataset, out_dataset):
+@click.option("-c", "--compression-level", default=3, help="compression for zstd")
+def main(h5_path, dataset, out_dataset, compression_level: int):
     print("resizing")
-    with h5py.File(h5_path, 'a') as tyh5:
-        imaging = tyh5[dataset]
-        image = tyh5[dataset][0]
+    with tables.open_file(h5_path, 'a') as tyh5:
+        imaging = tyh5.root[dataset]
+        # image = tyh5.root[dataset][0]
         shape = imaging.shape
-        dtype = image.dtype
+        dtype = imaging.dtype
+        # dtype = image.dtype
         nFrames = shape[0]
-        assert dtype in [np.float32, np.float64]
+        # assert dtype in [np.float32, np.float64]
         chunk_size = bf.helpers.chunk_size_for_memory_quota(imaging)
+        dset_filter = tables.filters.Filters(complevel=compression_level, complib='blosc:zstd')
+
         if len(shape)==3:
-            click.confirm('Spec calls for 4d imaging, but this is 3d. Are you'
+            raise(NotImplementedError("need to update for tables"))
+            click.confirm('Spec calls for 5d imaging, but this is 3d. Are you'
                 'sure you want to proceed?',
                     abort=True)
 
             nframes, H, W = imaging.shape
             new_image = bf.helpers.resize_3d(imaging[[0]],0.5,0.5)
             newH, newW = new_image.shape[-2:]
+            print(f"New size will be ({newH}, {newW})")
             if out_dataset in tyh5:
                 click.confirm(f'Do you want to overwrite {out_dataset}?',
                     abort=True)
@@ -47,9 +52,11 @@ def main(h5_path, dataset, out_dataset):
                 new_stack = bf.helpers.resize_3d(imaging[s:s+chunk_size], 0.5, 0.5)
                 dset[s:s+chunk_size] = new_stack
         elif len(shape)==4:
+            raise(NotImplementedError("need to update for tables"))
             nframes, Z, H, W = imaging.shape
             new_image = bf.helpers.resize_4d(imaging[[0]], 0.5, 0.5)
             newH, newW = new_image.shape[-2:]
+            print(f"New size will be ({newH}, {newW})")
             if out_dataset in tyh5:
                 click.confirm(f'Do you want to overwrite {out_dataset}?',
                     abort=True)
@@ -59,11 +66,30 @@ def main(h5_path, dataset, out_dataset):
             for s in tqdm(range(0,nFrames,chunk_size)):
                 new_stack = bf.helpers.resize_4d(imaging[s:s+chunk_size], 0.5, 0.5)
                 dset[s:s+chunk_size] = new_stack
+        elif len(shape)==5:
+            nframes, C, Z, H, W = imaging.shape
+            new_image = bf.helpers.resize_4d(imaging[0], 0.5, 0.5)
+            newH, newW = new_image.shape[-2:]
+            print(f"New size will be ({newH}, {newW})")
+            if out_dataset in tyh5:
+                click.confirm(f'Do you want to overwrite {out_dataset}?',
+                    abort=True)
+                tyh5.remove_node(out_dataset)
+            group, dset_name = os.path.split(out_dataset)
+            dset = tyh5.create_carray(group, dset_name,
+                tables.Atom.from_dtype(dtype), shape=(nframes, C, Z, newH, newW),
+                filters=dset_filter)
+
+            for s in tqdm(range(0,nFrames)):
+                new_stack = bf.helpers.resize_4d(imaging[s], 0.5, 0.5)
+                dset[s] = new_stack
+
         else:
-            raise(NotImplemented("wrong dimensions", tiff.shape))
+            raise(NotImplemented("wrong dimensions", shape))
         
-        for name, value in imaging.attrs.items():
-            dset.attrs[name] = value
+        # TODO re-enable
+        for name in imaging._v_attrs._v_attrnamesuser:
+            dset._v_attrs[name] = imaging._v_attrs[name]
 
 
 if __name__ == '__main__':

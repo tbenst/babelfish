@@ -29,7 +29,7 @@ from tqdm import tqdm
 import numpy as np
 from babelfish.helpers import resize_3d, resize_4d, compression_opts
 from scipy.ndimage.filters import minimum_filter1d
-import h5py
+import tables
 
 from functools import partial
 from moviepy.video.io.bindings import mplfig_to_npimage
@@ -84,7 +84,6 @@ def assign_stack_to_dset(dset, tiff_stack, channel=0, batch_size=1024):
     raise(NotImplementedError("only supports 3 and 4 dim"))
     
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
-
 @click.command(context_settings=CONTEXT_SETTINGS)
 @click.argument("tiff_paths", type=click.Path(exists=True), nargs=-1)
 @click.option("-o", "--output-path", type=click.Path(exists=False),
@@ -114,15 +113,26 @@ def tiff_channels_2_tyh5(tiff_paths: List, output_path: str, small: bool,
         name, _ = os.path.splitext(tiff_paths[0])
         name, _ = os.path.splitext(name) # handle two extensions
         output_path = name + ".ty.h5"
-    with h5py.File(output_path, 'w') as tyh5:
+    # with h5py.File(output_path, 'w') as tyh5:
+    if os.path.exists(output_path):
+        mode = click.prompt(
+            f'{output_path} exists.\nOverwrite, append or cancel? (w,a,c):',
+                             default='a')
+        if mode=='c':
+            exit(0)
+    else:
+        mode = 'w'
+
+    with tables.open_file(output_path, 'w') as tyh5:
         print(f"opened {output_path}")
-        if not "version" in tyh5.attrs:
-            tyh5.attrs["version"] = "0.1.0"
-        
+        if not "version" in tyh5.root._v_attrs:
+            tyh5.root._v_attrs["version"] = "0.1.0"
+        dset_filter = tables.filters.Filters(complevel=compression_level, complib='blosc:zstd')
         C = len(tiff_paths)
 
         tiff = read_tiff_path(tiff_paths[0])
         tiff_shape = tiff.series[0].shape
+        tiff_dtype = tiff.pages[0].dtype
         print("SHAPE", tiff_shape)
         if len(tiff_shape)==3:
             T, H, W = tiff_shape
@@ -132,12 +142,14 @@ def tiff_channels_2_tyh5(tiff_paths: List, output_path: str, small: bool,
         else:
             raise(NotImplementedError(f"bad tiff ndims of {len(tiff_shape)}"))
 
-        dset_raw = tyh5.create_dataset('imaging/raw', shape=(T, C, Z, H, W),
-            **compression_opts(compression_level, 'blosc:zstd', True))
+        imaging_g = tyh5.create_group('/', 'imaging')
+        dset_raw = tyh5.create_carray(imaging_g, 'raw',
+            tables.Atom.from_dtype(tiff_dtype), shape=(T, C, Z, H, W),
+            filters=dset_filter)
         assign_tiff_to_dset(dset_raw, tiff, channel=0)
         dset_raw.attrs['dimensions'] = "TCZHW"
         
-        imaging_attrs = tyh5["imaging"].attrs
+        imaging_attrs = tyh5.root["imaging"]._v_attrs
         imaging_attrs['nFrames'] = T
         imaging_attrs['nZ'] = Z
         
@@ -155,8 +167,9 @@ def tiff_channels_2_tyh5(tiff_paths: List, output_path: str, small: bool,
             T, Z, H, W = stack.shape
             assert H==256
             assert W==256
-            dset_small = tyh5.create_dataset('imaging/small', shape=(T, C, Z, H, W),
-                **compression_opts(compression_level, 'blosc:zstd', True))
+            dset_small = tyh5.create_carray(imaging_g, 'small',
+                tables.Float32Atom(), shape=(T, C, Z, H, W),
+                filters=dset_filter)
             dset_small.attrs['dimensions'] = "TCZHW"
             assign_stack_to_dset(dset_small, tiff, channel=0)
             

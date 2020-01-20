@@ -1,5 +1,6 @@
 let
   # now tracking https://github.com/tbenst/nixpkgs/tree/nix-data
+  # when updating, replace all in project
   nixpkgsSHA = "40e11a4fd00b82805e7f647dcbd32aeaa1eeffb5";
   pkgs = import (fetchTarball
     "https://github.com/tbenst/nixpkgs/archive/${nixpkgsSHA}.tar.gz") {

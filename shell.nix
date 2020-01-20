@@ -12,6 +12,7 @@ let
       babelfish-models
       jupyter
       mypy
+      pyarrow
       pylint
       stytra
       seqnmf
@@ -20,6 +21,7 @@ let
   };
 in
 # TODO how to hotload? don't install babelfish, just propagatedBuildInputs
+# TODO avoid GC https://github.com/NixOS/nix/issues/2208
 with pkgs;
 mkShell {
     inherit (secrets) MLFLOW_TRACKING_URI MLFLOW_TRACKING_USERNAME MLFLOW_TRACKING_PASSWORD;
@@ -31,6 +33,7 @@ mkShell {
     buildInputs = [
       python-env
       ffmpeg
+      strace
       zstd
     ];
     # nativeBuildInputs = [ qt4.wrapQtAppsHook ];

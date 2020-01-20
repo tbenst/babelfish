@@ -14,6 +14,7 @@
 , mlflow
 , moviepy
 , nose
+, numba
 , numpy
 , opencv3
 , pandas

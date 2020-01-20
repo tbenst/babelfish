@@ -1,0 +1,678 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[1]:
+
+
+get_ipython().run_line_magic('matplotlib', 'inline')
+
+
+# In[2]:
+
+
+import seqnmf
+import numpy as np, scipy, matplotlib.pyplot as plt, pandas as pd, os
+import h5py, tables
+import matplotlib.gridspec as gridspec
+from numba import jit
+import seaborn as sns
+import sklearn
+import sklearn.cluster
+import sklearn.mixture
+
+
+# In[3]:
+
+
+from IPython.display import set_matplotlib_formats
+
+set_matplotlib_formats('pdf', 'svg')
+
+
+# ## Drivers
+
+# In[18]:
+
+
+fish_id = "20191101-6f_f2_e1"
+
+
+# In[4]:
+
+
+hdf5 = "/data/dlab/zfish_2p/20191101_6f/f2_e1_FishVR.hdf5"
+
+
+# In[5]:
+
+
+frame_rate = 120
+
+
+# In[62]:
+
+
+plot_prefix = f"/home/tyler/Dropbox/dlab/2020-01-21/{fish_id}_"
+
+
+# ## data munging
+
+# ### read data
+
+# In[6]:
+
+
+mat_file = os.path.splitext(hdf5)[0] + ".mat"
+
+
+# In[7]:
+
+
+tb = pd.read_hdf(hdf5, 'data', mode='r')
+
+
+# In[8]:
+
+
+nFrames = len(tb)
+
+
+# In[9]:
+
+
+get_ipython().system('echo $hdf5')
+
+
+# In[10]:
+
+
+mat = h5py.File(mat_file, "r", swmr=True)
+if mat["gWaterVel"].shape[1]!=nFrames:
+    # only necessary due to mistake in hdf5_to_video (can remove in future...)
+    print(f"warning: found {nFrames} frames from stytra but {mat['gWaterVel'].shape[1]} frames from the .mat. Truncating")
+water_velocity = mat["gWaterVel"][:,:nFrames] # y,x
+# UP on projector is forward for fish, left is left, right is right
+# [15,0] -> up (forward)
+# [-15,0] -> down (backward)
+# [0,15] -> left
+# [0,-15] -> right
+
+
+# In[11]:
+
+
+# gPixDiff is non-zero
+# 
+mat.keys()
+
+
+# In[12]:
+
+
+mat
+
+
+# In[13]:
+
+
+mat["gPixDiff"][0,:10000].sum()
+
+
+# In[15]:
+
+
+get_ipython().system('mkdir "/home/tyler/Dropbox/dlab/2020-01-21"')
+
+
+# In[16]:
+
+
+# TODO figure out how to register frame to 2P
+plt.plot(mat["gFrameTime"][-1])
+
+
+# In[20]:
+
+
+mat["gFrameTime"][:,1]
+
+
+# In[21]:
+
+
+time = np.arange(nFrames)/frame_rate
+
+
+# ### quick look at data
+
+# In[22]:
+
+
+tb.head()
+
+
+# In[23]:
+
+
+time = np.arange(len(tb))/frame_rate
+plt.plot(time, tb.tail_sum)
+plt.title("Tail movements over time")
+plt.xlabel("Time (s)")
+plt.ylabel("tail sum")
+plt.savefig(f"/home/tyler/Dropbox/dlab/2020-01-21/{fish_id}_tail_movements.svg")
+
+
+# In[24]:
+
+
+np.unique(water_velocity)
+
+
+# ### construct masks for trial types
+
+# In[25]:
+
+
+# TODO https://github.com/portugueslab/stytra/issues/30
+stytra_len = len(tb)
+water_velocity = water_velocity[:,:stytra_len]
+
+
+# In[26]:
+
+
+right_mask = (water_velocity[0] == 0) & (water_velocity[1] < 0)
+left_mask = (water_velocity[0] == 0) & (water_velocity[1] > 0)
+forward_mask = (water_velocity[0] > 0) & (water_velocity[1] == 0)
+backward_mask = (water_velocity[0] < 0) & (water_velocity[1] == 0)
+nomotion_mask = (water_velocity[0] == 0) & (water_velocity[1] == 0)
+
+
+# In[27]:
+
+
+water_velocity.shape
+
+
+# In[28]:
+
+
+# May not balanced due to bug in code in 2019 (extra left on 11/01)
+mask_list = [forward_mask, backward_mask, left_mask, right_mask, nomotion_mask]
+time_count = list(map(sum, mask_list))
+min_time = np.min(time_count)
+time_count
+
+
+# In[29]:
+
+
+# TODO < len(tb) is a hack for the missing frames--presumably at end--for PyAV
+idx_list = list(map(lambda x: np.where(x[x<len(tb)])[0], mask_list))
+list(map(len, idx_list))
+
+
+# In[30]:
+
+
+min_time
+
+
+# In[31]:
+
+
+norm_idx_list = list(map(lambda i: i[np.random.choice(len(i), min_time, False)], idx_list))
+norm_forward_idx, norm_backward_idx, norm_left_idx, norm_right_idx, norm_nomotion_idx = norm_idx_list
+norm_masks = []
+for i,il in enumerate(norm_idx_list):
+    x = np.full(nomotion_mask.shape, False)
+    x[il] = True
+    norm_masks.append(x)
+    
+norm_forward_mask, norm_backward_mask, norm_left_mask, norm_right_mask, norm_nomotion_mask = norm_masks
+
+
+# In[32]:
+
+
+list(map(len,norm_idx_list))
+
+
+# In[33]:
+
+
+tail_sum_by_condition = list(map(lambda i: tb.tail_sum[i], norm_idx_list))
+
+
+# In[34]:
+
+
+def impute_nan(a):
+    # https://stackoverflow.com/questions/9537543/replace-nans-in-numpy-array-with-closest-non-nan-value
+    x = a[:]
+    mask = np.isnan(x)
+    x[mask] = np.interp(np.flatnonzero(mask), np.flatnonzero(~mask), x[~mask])
+    return x
+
+
+# In[35]:
+
+
+tail_sum = impute_nan(tb.tail_sum)
+
+
+# In[36]:
+
+
+diff_tail = np.diff(tail_sum)
+np.where(diff_tail>1)
+
+
+# In[37]:
+
+
+# https://stackoverflow.com/questions/26070514/how-do-i-get-the-index-of-a-specific-percentile-in-numpy-scipy
+def percentile_idx(array, percentile):
+    """Given array, return index of element corresponding to percentile."""
+    idx = int(percentile/100 * (len(array) - 1)+0.5) # 25%
+    return np.argpartition(array, idx)[idx]
+
+def closest_idx(array, val):
+    "Return idx of element that is closest to val"
+    return (np.abs(array - val)).argmin()
+
+
+# ### trial DataFrame
+
+# ### tail metrics (vigor, bouts, ...)
+# http://www.portugueslab.com/stytra/overview/4_closed_loop.html?highlight=vigor
+# std of tail_sum for 50ms (120 fps / 20 = 6)
+
+# In[38]:
+
+
+vigor = tb.tail_sum.rolling(6).std()
+
+
+# In[41]:
+
+
+plt.plot(time, vigor)
+plt.title("Tail movement vigor")
+plt.xlabel("time (s)")
+plt.ylabel("std of tail angle (50ms)")
+plt.savefig(plot_prefix+"vigor.svg")
+
+
+# ### tail bouts
+
+# In[42]:
+
+
+# https://github.com/portugueslab/example_stytra_analysis/blob/230fd312ecb15d353170c62a258d44dedb88aa11/utilities.py#L244
+@jit(nopython=True)
+def extract_segments_above_thresh(
+    vel, threshold=0.1, min_duration=20, pad_before=12, pad_after=25, skip_nan=True
+):
+    """ Useful for extracing bouts from velocity or vigor
+    :param vel:
+    :param threshold:
+    :param min_duration:
+    :param pad_before:
+    :param pad_after:
+    :return:
+    """
+    bouts = []
+    in_bout = False
+    start = 0
+    connected = []
+    continuity = False
+    i = pad_before + 1
+    bout_ended = pad_before
+    while i < vel.shape[0] - pad_after:
+        if np.isnan(vel[i]):
+            continuity = False
+            if in_bout and skip_nan:
+                in_bout = False
+
+        elif i > bout_ended and vel[i - 1] < threshold < vel[i] and not in_bout:
+            in_bout = True
+            start = i - pad_before
+
+        elif vel[i - 1] > threshold > vel[i] and in_bout:
+            in_bout = False
+            if i - start > min_duration:
+                bouts.append((start, i + pad_after))
+                bout_ended = i + pad_after
+                if continuity:
+                    connected.append(True)
+                else:
+                    connected.append(False)
+            continuity = True
+
+        i += 1
+
+    return bouts, connected
+
+
+# In[43]:
+
+
+bouts = extract_segments_above_thresh(np.array(vigor),0.01)[0]
+len(bouts)
+
+
+# In[44]:
+
+
+min_bout = np.array(list(map(lambda x: x[1]-x[0], bouts))).min()
+min_bout
+
+
+# ### Tidy DataFrame munging
+
+# In[45]:
+
+
+# take average nomotion_interval, dropping final few in case of early stop
+nomotion_interval = np.diff(np.where(np.diff(nomotion_mask))[0])[0:-3:2].mean()
+nomotion_interval
+motion_interval = int(np.diff(np.where(np.diff(nomotion_mask))[0])[1:-3:2].mean())
+pre_motion_interval = int(nomotion_interval/2)
+post_motion_interval = int(nomotion_interval - pre_motion_interval)
+
+
+# In[46]:
+
+
+# -1 is start of motion, 1 is end of motion
+trial_transitions = np.diff(nomotion_mask.astype(np.int))
+trial_transitions = np.insert(trial_transitions,0,0)
+# a trial is pre_motion_interval, motion_interval, post_motion_interval
+pretrial_transitions = np.roll(trial_transitions, -pre_motion_interval)
+# trial number of each frame
+trial_number = (pretrial_transitions==-1).cumsum()
+
+
+# In[47]:
+
+
+# create time vector of relative time in the trial
+trial_time = np.zeros_like(trial_number, dtype=float)
+prev_trial = 0
+for t in range(1,len(trial_time)):
+    new_trial = trial_number[t]
+    if new_trial==prev_trial:
+        # increment one relative frame number
+        trial_time[t] = trial_time[t-1]+1
+    else:
+        # trial start is relative time 0
+        trial_time[t] = 0
+    prev_trial = new_trial
+trial_time /= frame_rate
+
+
+# In[48]:
+
+
+assert pre_motion_interval == np.where(trial_transitions==-1)[0][0] - np.where(pretrial_transitions==-1)[0][0]
+
+
+# ### DataFrame dtypes
+
+# In[49]:
+
+
+# used as spec (not enforced...)
+motion_type_list = ["no_motion", "forward", "backward", "left", "right"]
+motion_dtype = pd.CategoricalDtype(motion_type_list, ordered=False)
+# each trial has motion
+trial_dtype = pd.CategoricalDtype(motion_type_list[1:], ordered=False)
+metric_dtype = pd.CategoricalDtype(["vigor", "tail_sum", "bout_duration"], ordered=False)
+tidy_cols = ["tail_metric", "value", "motion", "trial_number", "frame_num", "trial_time"]
+
+
+# In[50]:
+
+
+motion = forward_mask*1 + backward_mask*2 + left_mask*3 + right_mask*4
+motion = pd.Series([motion_type_list[m] for m in motion], dtype=motion_dtype)
+
+
+# ### Create DataFrames
+# we create multiple tidy dataframes with frame_num as the key
+
+# In[51]:
+
+
+# add vigor to tidy_df
+tail_metric = pd.Series(["vigor"]*nFrames, dtype=metric_dtype)
+# len nFrames
+frame_df = pd.DataFrame({"frame_num": np.arange(nFrames), "trial_number": trial_number, "motion": motion, "trial_time": trial_time, "time": time})
+
+
+# In[52]:
+
+
+# len nTrials
+trial_df = (frame_df.loc[frame_df.motion!="no_motion"].drop_duplicates("trial_number"))[["trial_number", "motion"]].rename(columns={"motion": "trial_type"})
+trial_df["trial_type"] = trial_df["trial_type"].astype(trial_dtype)
+
+
+# In[53]:
+
+
+# all metrics, starting with vigor
+not_nan = ~np.isnan(vigor)
+metric_df = pd.DataFrame({"metric": tail_metric[not_nan], "value": vigor[not_nan], "frame_num": np.arange(nFrames)[not_nan]})
+
+
+# In[54]:
+
+
+# add bout with duration as value to metric_df
+bout_duration = list(map(lambda x: (x[1]-x[0])/frame_rate, bouts))
+bout_frame_num = map(lambda x: x[0], bouts)
+bout_metric = pd.Series(["bout_duration"]*len(bout_duration), dtype=metric_dtype)
+metric_df = metric_df.append(pd.DataFrame({"metric": bout_metric, "value": bout_duration, "frame_num": bout_frame_num}))
+
+
+# In[55]:
+
+
+# add tail_sum
+tail_metric = pd.Series(["tail_sum"]*nFrames, dtype=metric_dtype)
+metric_df = metric_df.append(pd.DataFrame({"metric": tail_metric, "value": tb.tail_sum, "frame_num": np.arange(nFrames)}))
+
+
+# In[56]:
+
+
+tidy_df = frame_df.merge(trial_df, on="trial_number").merge(metric_df, on="frame_num")
+tidy_df.head()
+
+
+# ## Choose tail threshold
+
+# In[46]:
+
+
+tail_metric = vigor
+# tail_metric = tail_sum
+# percentiles = [99.85,99.88,99.9,99.95,99.99,100] # set by threshold better...
+# exemplars = [percentile_idx(tail_sum,p) for p in percentiles]
+vals = [0.005, 0.008, 0.01, 0.012, 0.014, 0.016, 0.018, 0.02,0.03,0.04,0.05,0.1,0.5]
+exemplars = [closest_idx(tail_metric,v) for v in vals]
+offset = 0
+
+fig = plt.figure(constrained_layout=True, figsize=(len(vals)*3,6))
+spec = gridspec.GridSpec(nrows=2, ncols=len(vals), figure=fig)
+
+# fig,ax = plt.subplots(len(percentiles),2, figsize=(10,4))
+for p,perc in enumerate(vals):
+    i = exemplars[p] + offset
+    print(i,perc)
+    ax1 = fig.add_subplot(spec[0,p])
+    ax1.imshow(mat["gROI"][i,0])
+    ax2 = fig.add_subplot(spec[1,p])
+    ax2.imshow(mat["gROI"][i+1,0])
+    ax1.set_title(f"metric: {tail_metric[i]:.4} ({float(perc):.4})")
+    ax2.set_title(f"Index {i+1}")
+    
+plt.tight_layout()
+
+
+# In[57]:
+
+
+tail_threshold = 0.01
+
+
+# ## histograms
+
+# In[58]:
+
+
+tail_metric = vigor
+metric_meets_threshold = vigor>tail_threshold
+fig, ax = plt.subplots(2,2)
+bins = np.histogram_bin_edges(tail_metric[metric_meets_threshold],20)
+xlabel = "vigor"
+hist_max = 0
+ax1 = ax[0,0]
+ax1.set_title("forward OMR")
+ax1.set_xlabel(xlabel)
+ax1.set_ylabel("count")
+hist = ax1.hist(tail_metric[np.logical_and(metric_meets_threshold, norm_forward_mask)], bins)
+hist_max = max(hist_max, max(hist[0]))
+
+ax2 = ax[0,1]
+ax2.set_title("backward OMR")
+ax2.set_xlabel(xlabel)
+ax2.set_ylabel("count")
+hist = ax2.hist(tail_metric[np.logical_and(metric_meets_threshold, norm_backward_mask)], bins)
+hist_max = max(hist_max, max(hist[0]))
+
+ax3 = ax[1,0]
+ax3.set_title("left OMR")
+ax3.set_xlabel(xlabel)
+ax3.set_ylabel("count")
+hist = ax3.hist(tail_metric[np.logical_and(metric_meets_threshold, norm_left_mask)], bins)
+hist_max = max(hist_max, max(hist[0]))
+
+ax4 = ax[1,1]
+ax4.set_title("right OMR")
+ax4.set_xlabel(xlabel)
+ax4.set_ylabel("count")
+hist = ax4.hist(tail_metric[np.logical_and(metric_meets_threshold, norm_right_mask)], bins)
+hist_max = max(hist_max, max(hist[0]))
+
+for ax in [ax1,ax2,ax3,ax4]:
+    ax.set_ylim(0,hist_max)
+
+plt.tight_layout()
+plt.savefig(plot_prefix+"movement_histogram_by_cond.svg")
+
+
+# ### bout histogram
+
+# ### trial-average vigor w/ error bars
+
+# In[59]:
+
+
+df = tidy_df.loc[(tidy_df["trial_number"]>=1) & (tidy_df["metric"].isin(["vigor", "tail_sum"]))]
+df["metric"].cat.remove_unused_categories(inplace=True)
+
+
+# In[ ]:
+
+
+g = sns.FacetGrid(df, col="trial_type", row="metric", hue="trial_type", sharey='row', margin_titles=True)
+g.map(sns.lineplot, "trial_time", "value")
+for ax in g.axes.flat:
+    ax.axvspan(pre_motion_interval/frame_rate,(pre_motion_interval+motion_interval)/frame_rate, alpha=0.3, color='gray')
+    
+plt.savefig(plot_prefix+"trial_avg_tail_metric.svg")
+
+
+# In[63]:
+
+
+df = tidy_df.loc[tidy_df.metric=="bout_duration"]
+g = sns.FacetGrid(df, col="trial_type", hue="trial_type")
+g.map(plt.hist, "value")
+g.set_xlabels("Bout duration (s)")
+plt.savefig(plot_prefix+"bout_duration_hist.svg")
+
+
+# ### supervised bout classification
+
+# In[65]:
+
+
+ex_bout = bouts[0]
+
+
+# ### unsupervised bout classification
+# https://www.biorxiv.org/content/biorxiv/early/2019/06/15/672246.full.pdf
+
+# In[46]:
+
+
+assert min_bout > frame_rate/6 # 167ms
+norm_bout_length = int(frame_rate/6)
+nbouts = len(bouts)
+
+
+# In[47]:
+
+
+# all tail angles
+bouts_all_angles = np.hstack(list(map(
+    lambda x: tb.loc[x[0]:x[1]].to_numpy()[None,0:norm_bout_length, 1:],
+    bouts))).reshape(nbouts,-1)
+
+# just tail sum
+bouts_tail_sum = np.hstack(list(map(
+    lambda x: tail_sum[x[0]:x[1]][None,0:norm_bout_length],
+    bouts))).reshape(nbouts,-1)
+
+
+# In[51]:
+
+
+def classify_bouts(data:np.ndarray, data_str: str, technique: str):
+    if technique=="PCA":
+        decomposition = sklearn.decomposition.PCA()
+    elif technique=="t-SNE": 
+        decomposition = sklearn.manifold.TSNE()
+    else:
+        raise NotImplementedError()
+    embedded = decomposition.fit_transform(data)
+#     labels = sklearn.cluster.KMeans(4).fit(embedded).labels_
+    labels = sklearn.mixture.BayesianGaussianMixture(4).fit_predict(embedded)
+    df = pd.DataFrame({"technique": [technique]*nbouts, "data": [data_str]*nbouts,
+                   "dim1": embedded[:,0], "dim2": embedded[:,1], "cluster": labels})
+    return df  
+
+df = classify_bouts(bouts_all_angles, "all angles", "t-SNE")
+df = df.append(classify_bouts(bouts_all_angles, "all angles", "PCA"))
+df = df.append(classify_bouts(bouts_tail_sum, "sum angle", "t-SNE"))
+df = df.append(classify_bouts(bouts_tail_sum, "sum angle", "PCA"))
+
+g = sns.FacetGrid(df, col="technique", row="data", hue="cluster",
+                  margin_titles=True, sharex=False, sharey=False, aspect=1.5)
+g.map(plt.scatter, "dim1", "dim2")
+
+
+# In[53]:
+
+
+import moviepy.editor as mpy
+
+
+# In[ ]:
+
+
+# bout classification: angle vs duration 

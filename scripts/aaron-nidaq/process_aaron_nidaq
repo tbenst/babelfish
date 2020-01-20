@@ -1,107 +1,128 @@
 #!/usr/bin/env bash
 "true" '''\'
-exec nix-shell "$(dirname ${BASH_SOURCE[0]})/../shell.nix" --run "$(printf '%q ' python "$0" "$@")"
+exec nix-shell --pure "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" --run "$(printf '%q ' python "$0" "$@")"
 '''
 
-# %%
-
-import os
+import os, click
 from glob import glob
 import tifffile
 import h5py
 from importlib import reload 
-fishid = 'f2_e1'
-path = '/data/dlab/zfish_2p/20191101_6f/'
-print(path)
-
-
-# Generate filenames based on selected fish
-bins = glob(path + fishid + "*.bin")
-assert len(bins)==1
-
-def glob_one_file(path):
-    results = glob(path)
-    if len(results) == 1:
-        return results[0]
-    else:
-        print("found " + str(len(results)) + " files instead of one for " + path)
-        return ""
-
-#raw data and processed tail data
-timing_log = glob_one_file(path + fishid + "*.bin")
-print('nidaq timing log:', os.path.isfile(timing_log))
-
-vr_log = glob_one_file(path + fishid + "*.mat")
-print('vr log:', os.path.isfile(vr_log))
-
-ty_h5_path = glob_one_file(path + fishid + "*.ty.h5")
-print('tyh5:', os.path.isfile(ty_h5_path))
-
-vr_h5 = h5py.File(vr_log)
-print("tail frames: ", 'gROI' in list(vr_h5.keys()))
-
-tyh5 = h5py.File(ty_h5_path, "r", swmr=True)
-if 'frame_start' in list(tyh5['imaging'].keys()):
-    print('already completed')
-    exit(0)
-
+from babelfish.helpers import glob_one_file
 
 import numpy as np
-import os,time
+import time
 import nilogger_binary_log_parser as niparse
 
 from datetime import datetime
 from datetime import timedelta
 import scipy.io
 
-# ### Process timing log files
-
-# Load the ni log file
-daq_time, daq_channels, fs = niparse.parse_matlab_daq_binary_log(timing_log,num_channels=3)
-    #Row 0 is 2P
-    #Row 1 is tailcam
-    #Row 2 is current.
-
-# start_time_2p = 850*1000
-start_time_2p = None #None if beginning of log file is fine.
-# end_time_2p = 22630*1000
-end_time_2p = None #None if end of log file is fine.
-num_zplanes = tyh5["/imaging"].attrs["nZ"]
-raise(NotImplementedError("update zplanes to tyh5 0.1.0 spec"))
-# %%
-num_frame_avg = 1 #specify # of frames averaged
-
-t_secs = daq_time
-fs = 1/ np.diff(t_secs).mean()
-frame_st = []; frame_et = [];
-frame_st, frame_et = niparse.segment_2p_frametimes(daq_channels[0,:], fs, num_zplanes=num_zplanes, num_frame_avg=num_frame_avg, start_time = start_time_2p,end_time=end_time_2p)
-print("2P Imaging log: Parsed %d z-planes each with %d frames at %2.4fHz"%(frame_st.shape[1], frame_st.shape[0], 1/np.diff(frame_st[:,0]).mean()))
-
-tailcam_st, tailcam_et = niparse.segment_tailcam_frametimes(daq_channels[1,:], fs)
-# tailcam_st = tailcam_st[]
-print("Tailcam log: Parsed %d tail start times"%(tailcam_st.shape[0]))
-num_video_frames = vr_h5["gFrameNum"].shape[1]
-frame_rate = 1/np.diff(tailcam_st).mean()
-print("Number of tail frames in vr log: %d at %f fps." % (num_video_frames,frame_rate))
-print('Unless the tailcam display is off, this will slightly exceed the # of tail video frames')
-# np.savez(frame_times_fn, frame_st=frame_st, frame_et=frame_et, tailcam_st=tailcam_st, tailcam_et=tailcam_et, 
-#          avg_tailcam_rate=frame_rate, num_zplanes=num_zplanes, num_frame_avg=num_frame_avg,start_time_2p=start_time_2p,end_time_2p=end_time_2p)
-
-# In[91]:
-
-try:
-    tailcam_group = tyh5.create_group("/tailcam")
-    tailcam_group.attrs["frame_rate"] = frame_rate
-    tailcam_group.attrs["frame_rate"] = frame_rate
-    tyh5.create_dataset("/tailcam/frame_start", data=tailcam_st)
-    tyh5.create_dataset("/tailcam/frame_end", data=tailcam_et)
-    tyh5.create_dataset("/tailcam/frames", data=vr_h5["gROI"][:,0])
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+@click.command(context_settings=CONTEXT_SETTINGS)
+@click.argument("experiment_directory", type=click.Path(exists=True),
+                required=False)
+@click.option("-n", "--num_frame_avg", default=1)
+def main(experiment_directory, num_frame_avg):
+    """Extract tailcam and 2P frame times, and save to .ty.h5
     
-    tyh5.create_dataset("/imaging/frame_start", data=frame_st)
-    tyh5.create_dataset("/imaging/frame_end", data=frame_et)
-# except Exception as e:
-#     tyh5.close()
-#     raise(e)
+    binary_log: .bin file
+    vr_log: .mat file
+    
+    Example: process_aaron_nidaq f2_e1_6f -o f1_e1_6s_omr
+     .ty.h5
+    """
+    if not experiment_directory:
+        # print help and exit
+        ctx = click.get_current_context()
+        click.echo(ctx.get_help())
+        exit(0)
+    experiment_name, _ = os.path.split(experiment_directory)
+    experiment_directory = experiment_directory + '/'
+    vr_log = glob_one_file(experiment_directory+"raw/*.mat")
+    binary_log = glob_one_file(experiment_directory+"raw/*.bin")
+    tyh5_path = glob_one_file(experiment_directory + "/*.ty.h5")
+    assert type(vr_log)==str
+    assert type(binary_log)==str
+    assert type(tyh5_path)==str
 
-# print('saved')
-# tyh5.close()
+    #raw data and processed tail data
+
+    vr_h5 = h5py.File(vr_log)
+    print("tail frames: ", 'gROI' in list(vr_h5.keys()))
+
+    tyh5 = h5py.File(tyh5_path, "a", swmr=True)
+    if 'frame_start' in list(tyh5['imaging'].keys()):
+        if click.confirm(f'/imaging/frame_start already exists. Continue?'):
+            click.echo('Deleting frame_start & frame_end')
+            del tyh5["/tailcam/frame_start"]
+            del tyh5["/tailcam/frame_end"]            
+            del tyh5["/imaging/frame_start"]
+            del tyh5["/imaging/frame_end"]
+
+        else:
+            click.echo('Quitting')
+            exit(0)
+
+
+    # ### Process timing log files
+
+    # Load the ni log file
+    daq_time, daq_channels, fs = niparse.parse_matlab_daq_binary_log(binary_log,num_channels=3)
+        #Row 0 is 2P
+        #Row 1 is tailcam
+        #Row 2 is current.
+
+    # start_time_2p = 850*1000
+    start_time_2p = None #None if beginning of log file is fine.
+    # should save this if not None
+    # end_time_2p = 22630*1000
+    end_time_2p = None #None if end of log file is fine.
+    try:
+        num_zplanes = tyh5["/imaging"].attrs["nZ"]
+    except:
+        raise(NotImplementedError("update zplanes to tyh5 0.1.0 spec"))
+
+    t_secs = daq_time
+    fs = 1/ np.diff(t_secs).mean()
+    frame_st = []; frame_et = [];
+    frame_st, frame_et = niparse.segment_2p_frametimes(daq_channels[0,:], fs, num_zplanes=num_zplanes, num_frame_avg=num_frame_avg, start_time = start_time_2p,end_time=end_time_2p)
+    twoP_frame_rate = 1/np.diff(frame_st[:,0]).mean()
+    print("2P Imaging log: Parsed %d z-planes each with %d frames at %2.4fHz"%(frame_st.shape[1], frame_st.shape[0], twoP_frame_rate))
+
+    tailcam_st, tailcam_et = niparse.segment_tailcam_frametimes(daq_channels[1,:], fs)
+    # tailcam_st = tailcam_st[]
+    print("Tailcam log: Parsed %d tail start times"%(tailcam_st.shape[0]))
+    num_video_frames = vr_h5["gFrameNum"].shape[1]
+    frame_rate = 1/np.diff(tailcam_st).mean()
+    print("Number of tail frames in vr log: %d at %f fps." % (num_video_frames,frame_rate))
+    print('Unless the tailcam display is off, this will slightly exceed the # of tail video frames')
+
+    # In[91]:
+    try:
+        if not "tailcam" in list(tyh5.keys()):
+            tailcam_group = tyh5.create_group("/tailcam")
+        else:
+            tailcam_group = tyh5["/tailcam"]         
+        # WARNING: might be slightly off if there is a gap
+        # (e.g. started twice)...   
+        tailcam_group.attrs["frame_rate"] = frame_rate
+        tyh5.create_dataset("/tailcam/frame_start", data=tailcam_st)
+        tyh5.create_dataset("/tailcam/frame_end", data=tailcam_et)
+        # we already have a movie...
+        # tyh5.create_dataset("/tailcam/frames", data=vr_h5["gROI"][:,0])
+        
+        tyh5.create_dataset("/imaging/frame_start", data=frame_st)
+        tyh5.create_dataset("/imaging/frame_end", data=frame_et)
+        tyh5["/imaging"].attrs["num_frame_avg"] = num_frame_avg
+        tyh5["/imaging"].attrs["frame_rate"] = twoP_frame_rate
+    except Exception as e:
+        print(f"exception raised: {e}.\n Trying to close tyh5...")
+        tyh5.close()
+        raise(e)
+
+    print('Done!')
+    tyh5.close()
+    
+if __name__ == "__main__":
+    main()

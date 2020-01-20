@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 "true" '''\'
-exec nix-shell "$(dirname ${BASH_SOURCE[0]})/../shell.nix" --run "$(printf '%q ' python "$0" "$@")"
+exec nix-shell --pure "$(dirname ${BASH_SOURCE[0]})/../shell.nix" --run "$(printf '%q ' python "$0" "$@")"
 '''
 
 __doc__ = """

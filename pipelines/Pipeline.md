@@ -1,3 +1,46 @@
+# DAG for scripts:
+## Example order (dependencies indented):
+
+`name=f1_e1 && bfconvert "$name.oir" "$name.ome.btf"`
+  tiffs_2_tyh5
+    hdf5_to_video (optional viz of maxZ)
+    resize_dataset f2_e1_6f/f2_e1_omr.ty.h5 "/imaging/raw" "/imaging/small"
+    dset_df_f
+hdf5_to_video (tailcam .mat)
+  (1) `python -m stytra.offline.track_video`
+(2) process_aaron_nidaq
+(1 & 2)
+  tidy_data
+
+
+
+## nodes
+letter or script name
+A) `name=f1_e1 && bfconvert "$name.oir" "$name.ome.btf"`
+B) `python -m stytra.offline.track_video`
+
+## Dependencies
+motion_correction: A
+mc_2_tyh5: motion_correction (not implemented)
+tiffs_2_tyh5: A
+ome2nrrd: A
+hdf5_to_video: tiffs_2_tyh5 | mc_2_tyh5 | None (.mat)
+train: tiffs_2_tyh5 | mc_2_tyh5
+functional_connectivity_image_map: train
+count_vid_frames: hdf5_to_video
+B: hdf5_to_video (.mat)
+tail_metrics: B & process_aaron_nidaq
+tidy_data: process_aaron_nidaq & B
+
+
+Neural pipeline (ideal...)
+motion_correction
+ome2nrrd
+
+
+
+
+
 # bash
 ```
 # convert matlab gROI to .mp4
@@ -40,3 +83,5 @@ airflow scheduler
 - 20190429/olympus/f5e2.ty.h5
   - weird shape (14, 999, 225, 512) - should delete
 need to transpose T & Z...?
+
+working on 20191101, 20191031, 20191017
