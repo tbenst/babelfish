@@ -10,12 +10,14 @@ import h5py, tables, click
 import matplotlib.gridspec as gridspec
 import seaborn as sns
 from babelfish.helpers import glob_one_file
+from tqdm import tqdm
 from babelfish.behavior import extract_segments_above_thresh
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.command(context_settings=CONTEXT_SETTINGS)
+@click.option("-t", '--tail-threshold', type=float)
 @click.argument("experiment_directory", type=click.Path(exists=True), required=True)
-def main(experiment_directory):
+def main(experiment_directory, tail_threshold):
     experiment_directory = experiment_directory + '/'
     mat_file = glob_one_file(experiment_directory+"raw/*FishVR.mat")
     stytra_path = glob_one_file(experiment_directory+"tail/*FishVR.hdf5")
@@ -108,10 +110,45 @@ def main(experiment_directory):
     plt.ylabel("std of tail angle (50ms)")
     plt.savefig(plot_prefix+"vigor.svg")
 
+    # DETERMINE THRESHOLD:
+    if not tail_threshold:
+        tail_metric = vigor.interpolate()
+        # tail_metric = impute_nan(vigor)
+        vals = np.linspace(0,tail_metric.max(),100)
+        exemplars = [closest_idx(tail_metric,v) for v in vals]
+        offset = -5
+
+        fig = plt.figure(constrained_layout=True, figsize=(len(vals)*2,12))
+        spec = gridspec.GridSpec(nrows=6, ncols=len(vals), figure=fig)
+
+        # fig,ax = plt.subplots(len(percentiles),2, figsize=(10,4))
+        for e,idx in tqdm(enumerate(exemplars)):
+            print(f"target: {vals[e]:.4}, actual: {tail_metric[idx]:.4}")
+            i = idx + offset
+            print(i)
+            ax1 = fig.add_subplot(spec[0,e])
+            ax1.imshow(mat["gROI"][i,0])
+            ax2 = fig.add_subplot(spec[1,e])
+            ax2.imshow(mat["gROI"][i+1,0])
+            ax1.set_title(f"{tail_metric[idx]:.4}")
+            ax2.set_title(f"Index {idx}")
+            fig.add_subplot(spec[2,e]).imshow(mat["gROI"][i+2,0])
+            fig.add_subplot(spec[3,e]).imshow(mat["gROI"][i+3,0])
+            fig.add_subplot(spec[4,e]).imshow(mat["gROI"][i+4,0])
+            fig.add_subplot(spec[5,e]).imshow(mat["gROI"][i+5,0])
+
+        plt.tight_layout()
+        thresh_path = experiment_directory+"plot/tail_threshold.png"
+        fig.savefig(thresh_path)
+        print(f"Saved {thresh_path}. Please review to set reasonable threshold.")
+        tail_threshold = click.prompt(
+            'Enter threshold for detecting bouts', type=float)
+
 
     # ### tail bouts
 
-    bouts, bout_is_connected = extract_segments_above_thresh(np.array(vigor),0.01)
+    bouts, bout_is_connected = extract_segments_above_thresh(np.array(vigor),
+                                                             tail_threshold)
     len(bouts)
 
     min_bout = np.array(list(map(lambda x: x[1]-x[0], bouts))).min()
@@ -207,6 +244,13 @@ def main(experiment_directory):
     metric_df.to_parquet(experiment_directory + '/data_frames/metric_df.parquet')
     trial_df.to_parquet(experiment_directory + '/data_frames/trial_df.parquet')
     bouts_df.to_parquet(experiment_directory + '/data_frames/bouts_df.parquet')
-    
+
+def impute_nan(a):
+    # https://stackoverflow.com/questions/9537543/replace-nans-in-numpy-array-with-closest-non-nan-value
+    x = a[:]
+    mask = np.isnan(x)
+    x[mask] = np.interp(np.flatnonzero(mask), np.flatnonzero(~mask), x[~mask])
+    return x
+
 if __name__ == "__main__":
     main()

@@ -1,17 +1,18 @@
 # DAG for scripts:
 ## Example order (dependencies indented):
+script_prefix=~/code/babelfish/scripts/to_tyh5/
 
-`name=f1_e1 && bfconvert "$name.oir" "$name.ome.btf"`
-  tiffs_2_tyh5
+`name=f1_e1 && bfconvert "raw/$name.oir" "$name.ome.btf"`
+  tiffs_2_tyh5 -u 1 -c 1 f1_e1.ome.btf
     hdf5_to_video (optional viz of maxZ)
-    resize_dataset f2_e1_6f/f2_e1_omr.ty.h5 "/imaging/raw" "/imaging/small"
-    dset_df_f
+    (3) ~/code/babelfish/scripts/preprocessing/resize_datase -e f2e1 -d "/imaging/raw" -o "/imaging/small"
 hdf5_to_video (tailcam .mat)
   (1) `python -m stytra.offline.track_video`
 (2) process_aaron_nidaq
 (1 & 2)
   tidy_data
-
+(2 & 3)
+  dset_df_f f3e1/ -d "/imaging/small"
 
 
 ## nodes

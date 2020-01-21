@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import numpy as np
 from torch.utils.data import DataLoader, Dataset
+from matplotlib.colors import LinearSegmentedColormap
 # TODO switch to moviepy
 # import skvideo.io
 
@@ -185,3 +186,12 @@ def makePredVideo(model, data, batch_size=32, num_workers=12, name="test"):
             writer.writeFrame(scale_for_vid(frame,mymin,mymax))
     writer.close()
     return frame
+
+
+cdict = {'red':   [[0.0,  0.0, 0.0],
+                   [1.0,  0.0, 0.0]],
+         'green': [[0.0,  0.0, 0.0],
+                   [1.0,  1.0, 1.0]],
+         'blue':  [[0.0,  0.0, 0.0],
+                   [1.0,  0.0, 0.0]]}
+cmap_gfp = LinearSegmentedColormap('gfp', segmentdata=cdict, N=256)

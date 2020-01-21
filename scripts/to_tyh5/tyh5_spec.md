@@ -1,6 +1,8 @@
 ## Notes
 not everything can/should go in hdf5 file. Should do standard directory structure as well. `raw/` is whatever comes from experiment only.
 
+one set of oir per $FISH_$EXPERIMENT_$META ?
+f3_e1_omr and f3_structural for example
 
 TODO: x_um_per_pixel and co should be on RAW not imaging
 

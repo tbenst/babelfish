@@ -8,18 +8,25 @@ exec nix-shell --pure "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" --run "$(pr
 import click, os
 import numpy as np
 import babelfish as bf
+from babelfish.helpers import glob_one_file
 import tables
 from tqdm import tqdm
 
 
 @click.command()
-@click.argument("h5_path", type=click.Path(exists=True))
-@click.argument("dataset", type=str, required=False,
+@click.argument("h5_path", type=click.Path(exists=True), required=False)
+@click.option("-e", "--experiment-directory", type=click.Path(exists=True))
+@click.option("-d", "--dataset", type=str, required=False,
     default="/imaging/motion_corrected")
-@click.argument("out_dataset", type=str, required=False,
+@click.option("-o", "--out-dataset", type=str, required=False,
     default="/imaging/motion_corrected_small")
 @click.option("-c", "--compression-level", default=3, help="compression for zstd")
-def main(h5_path, dataset, out_dataset, compression_level: int):
+def main(h5_path, experiment_directory, dataset, out_dataset,
+         compression_level: int):
+    if not h5_path:
+        experiment_directory = experiment_directory + '/'
+        h5_path = glob_one_file(experiment_directory+"*.ty.h5")
+
     print("resizing")
     with tables.open_file(h5_path, 'a') as tyh5:
         imaging = tyh5.root[dataset]

@@ -1,109 +1,58 @@
 #!/usr/bin/env bash
 "true" '''\'
-exec nix-shell --pure "$(dirname ${BASH_SOURCE[0]})/../shell.nix" --run "$(printf '%q ' python "$0" "$@")"
+exec nix-shell --pure "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" --run "$(printf '%q ' python "$0" "$@")"
 '''
 __doc__ = """module docstring"""
 
-from babelfish.helpers import glob_one_file
+import os
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
 import tables, click
 from scipy import ndimage
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import numpy as np
-import torch
-import torch.nn.functional as F
 
-def df_f(t:torch.tensor, winsize:int, q:float=20, epsilon:int=10,
-         style:str="causal") -> torch.tensor:
-    """Pixel-wise ΔF/F with baseline from sliding-window q percentile filter.
-    
-    First dim assumed to be time. Causal, except for first winsize entries.
-    See Yu Mu, Davis V. Bennet (Cell 2019)"""
-    
-    # Note that ``kthvalue()`` works one-based, i.e. the first sorted value
-    # indeed corresponds to k=1, not k=0! Use float(q) instead of q directly,
-    # so that ``round()`` returns an integer, even if q is a np.float32.
-    k = int(round(.01 * float(q) * (winsize - 1)))
-    print("t", t.shape, "winsize", winsize, "k", k)
-    baseline_temp = t.unfold(0,winsize,1).kthvalue(k).values # winsize smaller than t    
-    prev_time_pad = t.shape[0] - baseline_temp.shape[0]
-    print("prev_time_pad", prev_time_pad)
-    print("baseline_temp", baseline_temp.shape)
-    baseline = torch.zeros_like(t)
-    if style=="causal":
-        baseline[prev_time_pad:] = baseline_temp
-        baseline[:prev_time_pad] = baseline_temp[0]
-    elif style=="acausal":
-        s = int(np.floor(prev_time_pad/2))
-        e = prev_time_pad - s
-        baseline[:s] = baseline_temp[0]
-        baseline[s:s+baseline_temp.shape[0]] = baseline_temp
-        baseline[s+baseline_temp.shape[0]:] = baseline_temp[-1]
-    else:
-        raise(NotImplementedError())
-    print("calculating df/f...")
-    return (t - baseline)/(baseline+epsilon)
-
-def numpy_df_f(nd:np.ndarray, winsize:int, q:float=20, epsilon:int=10,
-               style:str="causal", max_ram:float=24*1e3**3) -> np.ndarray:
-    """Pixel-wise ΔF/F with baseline from sliding-window q percentile filter.
-    
-    First dim assumed to be time. Causal, except for first winsize entries.
-    See Yu Mu, Davis V. Bennet (Cell 2019).
-    
-    This function chunks array on last second-to-last dimension (since row-major)
-    so it fits in GPU RAM, & calls df_f"""
-    array_size = np.product(nd.shape)*4 # always float32
-    cpu_array_size = np.product(nd.shape)*nd.dtype.itemsize
-    overhead = 8 # 4 was not enough, 6 prob ok
-    min_chunks = int(np.ceil(array_size/(max_ram)))*overhead
-    nrows = nd.shape[-2]
-    print("array_size", array_size, "min_chunks", min_chunks, nrows)
-    nrows_per_chunk = int(np.floor(nrows/min_chunks))
-    if nrows_per_chunk==0:
-        print("can fit all into memory")
-        # can fit in memory
-        nrows_per_chunk = nrows
-    chunk_shape = list(nd.shape)
-    chunk_shape[-2] = nrows_per_chunk
-    print("chunk_shape", chunk_shape)
-    chunk_size = np.product(chunk_shape)*4
-    estimated_gpu_ram = overhead*chunk_size
-    print(f"will use {estimated_gpu_ram/1024**3:3f} GB of GPU RAM and {cpu_array_size/1024**3:3f} GB of CPU RAM")
-    assert estimated_gpu_ram < max_ram
-    ret = np.zeros_like(nd)
-    for s in tqdm(range(0,nrows,nrows_per_chunk)):
-        chunk = torch.from_numpy(nd[...,s:s+nrows_per_chunk,:].astype(np.float32)).cuda()
-        print("chunk", chunk.shape)
-        # more than 2x faster to convert to numpy before assignment
-        ret[...,s:s+nrows_per_chunk,:] = df_f(chunk, winsize, q,
-                                            epsilon, style).cpu().numpy()
-    return ret
-    
-
-def tables_df_f(t:tables.carray.CArray, out:tables.carray.CArray, winsize:int,
-                q:float=20, epsilon:int=10, style:str="causal",
-                max_ram:float=6e3) -> None:
-    """Pixel-wise ΔF/F with baseline from sliding-window q percentile filter.
-    
-    First dim assumed to be time. Causal, except for first winsize entries.
-    See Yu Mu, Davis V. Bennet (Cell 2019).
-    
-    This function chunks array so it fits in GPU RAM, & calls _df_f"""
-    
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.command(context_settings=CONTEXT_SETTINGS)
+@click.argument("tyh5_path", type=click.Path(exists=True), required=False)
 @click.option('-g', '--gpu', default="1", help="GPU ID to use")
-@click.argument("experiment_directory", type=click.Path(exists=True), required=True)
-def main(experiment_directory,gpu):
+@click.option("-c", "--compression-level", default=3, help="compression for zstd")
+@click.option('-d', '--dset', default="/imaging/small",
+              help="which HDF5 dataset to use")
+@click.option("-e", "--experiment-directory", type=click.Path(exists=True))
+def main(tyh5_path, experiment_directory, gpu, dset, compression_level):
+    "Must specify TYH5_PATH or pass --experiment-directory"
+    experiment_directory = experiment_directory + '/'
+    # must come before torch import
     os.environ["CUDA_VISIBLE_DEVICES"]=gpu
+    from babelfish.helpers import tables_df_f
+    import torch.nn.functional as F
+    from babelfish.helpers import glob_one_file
     
-    tyh5_path = glob_one_file(experiment_directory+"*.ty.h5")
-    with tables.open_file(tyh5_path, 'r', swmr=True) as h5:
-        imaging = h5.root.imaging.small.read()
+    
+    group, name = os.path.split(dset)
+    
+    if not tyh5_path:
+        tyh5_path = glob_one_file(experiment_directory+"*.ty.h5")
+    with tables.open_file(tyh5_path, 'a', swmr=True) as h5:
+        imaging = h5.root[dset]
         frame_rate = h5.root.imaging._v_attrs["frame_rate"]
+        dset_filter = tables.filters.Filters(complevel=compression_level,
+                                             complib='blosc:zstd')
+        out_dset = dset+'_df_f'
+        if out_dset in h5:
+            click.confirm(f'Do you want to overwrite {out_dset}?',
+                abort=True)
+            h5.remove_node(out_dset)
+
+        out = h5.create_carray(group, name+'_df_f',
+            imaging.atom, shape=imaging.shape,
+            filters=dset_filter)
         
+        winsize = int(frame_rate*60*5) # 5 minutes
+        tables_df_f(imaging, out, winsize, 20)
+
         
     
 if __name__ == "__main__":

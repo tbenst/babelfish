@@ -23,7 +23,9 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.argument("experiment_directory", type=click.Path(exists=True),
                 required=False)
 @click.option("-n", "--num_frame_avg", default=1)
-def main(experiment_directory, num_frame_avg):
+@click.option("-m", "--old-mat-format", is_flag=True, default=False,
+              help="non-hdf5 .mat file")
+def main(experiment_directory, num_frame_avg, old_mat_format):
     """Extract tailcam and 2P frame times, and save to .ty.h5
     
     binary_log: .bin file
@@ -45,12 +47,16 @@ def main(experiment_directory, num_frame_avg):
     assert type(vr_log)==str
     assert type(binary_log)==str
     assert type(tyh5_path)==str
+    
 
     #raw data and processed tail data
-
-    vr_h5 = h5py.File(vr_log)
+    if old_mat_format:
+        import scipy.io
+        vr_h5 = scipy.io.loadmat(vr_log)
+    else:
+        vr_h5 = h5py.File(vr_log)
     print("tail frames: ", 'gROI' in list(vr_h5.keys()))
-
+    print(f"opening {tyh5_path} ...")
     tyh5 = h5py.File(tyh5_path, "a", swmr=True)
     if 'frame_start' in list(tyh5['imaging'].keys()):
         if click.confirm(f'/imaging/frame_start already exists. Continue?'):
@@ -93,7 +99,10 @@ def main(experiment_directory, num_frame_avg):
     tailcam_st, tailcam_et = niparse.segment_tailcam_frametimes(daq_channels[1,:], fs)
     # tailcam_st = tailcam_st[]
     print("Tailcam log: Parsed %d tail start times"%(tailcam_st.shape[0]))
-    num_video_frames = vr_h5["gFrameNum"].shape[1]
+    if old_mat_format:
+        num_video_frames = vr_h5["gFrameNum"].shape[0]
+    else:
+        num_video_frames = vr_h5["gFrameNum"].shape[1]
     frame_rate = 1/np.diff(tailcam_st).mean()
     print("Number of tail frames in vr log: %d at %f fps." % (num_video_frames,frame_rate))
     print('Unless the tailcam display is off, this will slightly exceed the # of tail video frames')
