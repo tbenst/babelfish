@@ -52,7 +52,7 @@ def uint16_to_rgb(array, dset_min, dset_max):
 @click.option('-i', '--vmin-percent', type=float, default=5, help="% for colormap")
 @click.option('-a', '--vmax-percent', type=float, default=99, help='% for colormap')
 @click.option('-q', '--quality', default='22', type=str,
-              help="CRF quality, 27 is crappy for Calcium imaging")
+              help="CRF quality, 22 is crappy for Calcium imaging")
 @click.option('-p', '--colormap/--no-colormap', default=False,
               help="Linear colormap with matplotlib")
 def hdf5_to_video(hdf5_file: str, dataset: str, quality: str, codec, pix_format,
@@ -74,7 +74,8 @@ def hdf5_to_video(hdf5_file: str, dataset: str, quality: str, codec, pix_format,
     if output_path is None:
         name, _ = os.path.splitext(hdf5_file)
         name, _ = os.path.splitext(name)
-        output_path = name + ".mp4"
+        groop, dset_name = os.path.split(dataset)
+        output_path = name + f"_{dset_name}.mp4"
     # scripts/hdf5_to_video /data/dlab/zfish_2p/20191101_6f/f2_e1_FishVR.mat "/gROI" x264 benchmark at 205.88 it/s
     # x265 at 110.8 it/s
     with tables.open_file(hdf5_file, 'r', swmr=True) as h5:
@@ -96,7 +97,8 @@ def hdf5_to_video(hdf5_file: str, dataset: str, quality: str, codec, pix_format,
         stream = output.add_stream(codec, frame_rate)
         # stream.bit_rate = bitrate
         stream.pix_fmt = pix_format
-        stream.options = {'crf': quality, 'gpu': gpu}
+        # cq for nvenc
+        stream.options = {'crf': quality, 'gpu': gpu, "cq": quality}
         
         if max_z:
             temp_array = imaging[0:500,channel].max(1)

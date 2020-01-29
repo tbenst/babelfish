@@ -10,7 +10,7 @@ hdf5_to_video (tailcam .mat)
   (1) `python -m stytra.offline.track_video`
 (2) process_aaron_nidaq
 (1 & 2)
-  tidy_data
+  tidy_tail_data
 (2 & 3)
   dset_df_f f3e1/ -d "/imaging/small"
 

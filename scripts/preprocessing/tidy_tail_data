@@ -1,0 +1,182 @@
+#!/usr/bin/env bash
+"true" '''\'
+exec nix-shell --pure "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" --run "$(printf '%q ' python "$0" "$@")"
+'''
+__doc__ = """Process logs & tail tracking into tidy data"""
+import matplotlib
+matplotlib.use("Agg")
+import numpy as np, scipy, matplotlib.pyplot as plt, pandas as pd, os
+import h5py, tables, click
+import matplotlib.gridspec as gridspec
+import seaborn as sns
+from babelfish.helpers import glob_one_file
+from tqdm import tqdm
+from babelfish.behavior import extract_segments_above_thresh
+
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+@click.command(context_settings=CONTEXT_SETTINGS)
+@click.option("-t", '--tail-threshold', type=float)
+@click.option("-m", "--old-mat-format", is_flag=True, default=False,
+              help="non-hdf5 .mat file")
+@click.argument("experiment_directory", type=click.Path(exists=True), required=True)
+def main(experiment_directory, tail_threshold, old_mat_format):
+    experiment_directory = experiment_directory + '/'
+    mat_file = glob_one_file(experiment_directory+"raw/*.mat")
+    stytra_path = glob_one_file(experiment_directory+"tail/*.hdf5")
+    tyh5_path = glob_one_file(experiment_directory+"*.ty.h5")
+    assert type(mat_file)==str and type(stytra_path)==str \
+        and type(tyh5_path)==str
+    plot_prefix = experiment_directory + "plot/"
+    os.makedirs(plot_prefix, exist_ok=True)
+
+    with h5py.File(tyh5_path, 'r', swmr=True) as h5:
+        frame_rate = h5["/imaging"].attrs["frame_rate"]
+
+    # ### read data
+
+    tb = pd.read_hdf(stytra_path, 'data', mode='r')
+
+    nFrames = len(tb)
+    if old_mat_format:
+        import scipy.io
+        mat = scipy.io.loadmat(mat_file)
+    else:
+        mat = h5py.File(mat_file, "r", swmr=True)
+    
+    if mat["gWaterVel"].shape[1]!=nFrames:
+        # TODO only necessary due to mistake in hdf5_to_video (can remove in future...)
+        print(f"warning: found {nFrames} frames from stytra but {mat['gWaterVel'].shape[1]} frames from the .mat. Truncating")
+    water_velocity = mat["gWaterVel"][:,:nFrames] # y,x
+    # UP on projector is forward for fish, left is left, right is right
+    # [15,0] -> up (forward)
+    # [-15,0] -> down (backward)
+    # [0,15] -> left
+    # [0,-15] -> right
+
+    time = np.arange(nFrames)/frame_rate
+
+    # https://stackoverflow.com/questions/26070514/how-do-i-get-the-index-of-a-specific-percentile-in-numpy-scipy
+    def percentile_idx(array, percentile):
+        """Given array, return index of element corresponding to percentile."""
+        idx = int(percentile/100 * (len(array) - 1)+0.5) # 25%
+        return np.argpartition(array, idx)[idx]
+
+    def closest_idx(array, val):
+        "Return idx of element that is closest to val"
+        return (np.abs(array - val)).argmin()
+
+
+    # ### tail metrics (vigor, bouts, ...)
+    # http://www.portugueslab.com/stytra/overview/4_closed_loop.html?highlight=vigor
+    # std of tail_sum for 50ms (120 fps / 20 = 6)
+
+    vigor = tb.tail_sum.rolling(6).std()
+
+    plt.plot(time, vigor)
+    plt.title("Tail movement vigor")
+    plt.xlabel("time (s)")
+    plt.ylabel("std of tail angle (50ms)")
+    plt.savefig(plot_prefix+"vigor.svg")
+
+    # DETERMINE THRESHOLD:
+    if not tail_threshold:
+        tail_metric = vigor.interpolate()
+        # tail_metric = impute_nan(vigor)
+        vals = np.linspace(0,tail_metric.max(),100)
+        exemplars = [closest_idx(tail_metric,v) for v in vals]
+        offset = -5
+
+        fig = plt.figure(constrained_layout=True, figsize=(len(vals)*2,12))
+        spec = gridspec.GridSpec(nrows=6, ncols=len(vals), figure=fig)
+
+        # fig,ax = plt.subplots(len(percentiles),2, figsize=(10,4))
+        for e,idx in tqdm(enumerate(exemplars)):
+            print(f"target: {vals[e]:.4}, actual: {tail_metric[idx]:.4}")
+            i = idx + offset
+            print(i)
+            ax1 = fig.add_subplot(spec[0,e])
+            ax1.imshow(mat["gROI"][i,0])
+            ax2 = fig.add_subplot(spec[1,e])
+            ax2.imshow(mat["gROI"][i+1,0])
+            ax1.set_title(f"{tail_metric[idx]:.4}")
+            ax2.set_title(f"Index {idx}")
+            fig.add_subplot(spec[2,e]).imshow(mat["gROI"][i+2,0])
+            fig.add_subplot(spec[3,e]).imshow(mat["gROI"][i+3,0])
+            fig.add_subplot(spec[4,e]).imshow(mat["gROI"][i+4,0])
+            fig.add_subplot(spec[5,e]).imshow(mat["gROI"][i+5,0])
+
+        plt.tight_layout()
+        thresh_path = experiment_directory+"plot/tail_threshold.png"
+        fig.savefig(thresh_path)
+        print(f"Saved {thresh_path}. Please review to set reasonable threshold.")
+        tail_threshold = click.prompt(
+            'Enter threshold for detecting bouts', type=float)
+
+
+    # ### tail bouts
+
+    bouts, bout_is_connected = extract_segments_above_thresh(np.array(vigor),
+                                                             tail_threshold)
+    len(bouts)
+
+    min_bout = np.array(list(map(lambda x: x[1]-x[0], bouts))).min()
+
+    # ### Tidy DataFrame munging
+
+    # ### DataFrame dtypes
+
+    # used as spec (not enforced...)
+    metric_dtype = pd.CategoricalDtype(["vigor", "bout_duration"] + list(tb.columns), ordered=False)
+
+
+    # ### Create DataFrames
+    # we create multiple tidy dataframes with frame_num as the key
+    
+    # TODO note: removed trial_df as well as trial_num
+
+    # add vigor to tidy_df
+    tail_metric = pd.Series(["vigor"]*nFrames, dtype=metric_dtype)
+    # len nFrames
+    # TODO no more trial_num nor motion nor trial_time
+    frame_df = pd.DataFrame({"frame_num": np.arange(nFrames),
+                            "time": time})
+
+    # all metrics, starting with vigor
+    metric_df = pd.DataFrame({"metric": tail_metric, "value": vigor,
+                            "frame_num": np.arange(nFrames)})
+
+    # add bout with duration as value to metric_df
+    bout_duration = list(map(lambda x: (x[1]-x[0])/frame_rate, bouts))
+    bout_frame_num = map(lambda x: x[0], bouts)
+    bout_metric = pd.Series(["bout_duration"]*len(bout_duration), dtype=metric_dtype)
+    metric_df = metric_df.append(pd.DataFrame({"metric": bout_metric, "value": bout_duration,
+                                            "frame_num": bout_frame_num}))
+
+    # add tail_sum & thetas
+    for col in tb.columns:
+        print(f"adding {col}")
+        tail_metric = pd.Series([col]*nFrames, dtype=metric_dtype)
+        metric_df = metric_df.append(pd.DataFrame({"metric": tail_metric, "value": tb[col],
+                                                "frame_num": np.arange(nFrames)}))
+
+    bouts_df = pd.DataFrame({"start_frame_num": list(map(lambda x: x[0], bouts)),
+                            "end_frame_num": list(map(lambda x: x[1], bouts)),
+                            "is_connected": bout_is_connected})
+
+    os.makedirs(experiment_directory+"data_frames", exist_ok=True)
+
+    # save DataFrames
+    # TODO circa June 2020: switch to Arrow 1.0
+    frame_df.to_parquet(experiment_directory + '/data_frames/frame_df.parquet')
+    metric_df.to_parquet(experiment_directory + '/data_frames/metric_df.parquet')
+    bouts_df.to_parquet(experiment_directory + '/data_frames/bouts_df.parquet')
+
+def impute_nan(a):
+    # https://stackoverflow.com/questions/9537543/replace-nans-in-numpy-array-with-closest-non-nan-value
+    x = a[:]
+    mask = np.isnan(x)
+    x[mask] = np.interp(np.flatnonzero(mask), np.flatnonzero(~mask), x[~mask])
+    return x
+
+if __name__ == "__main__":
+    main()

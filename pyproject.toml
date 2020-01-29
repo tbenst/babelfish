@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "babelfish"
+version = "0.1.0"
+description = "I can speak fish!"
+authors = ["Tyler Benster <github@tylerbenster.com>"]
+license = "gpl-3.0"
+
+[tool.poetry.dependencies]
+python = "^3.7"
+h5py = "^2.10.0"
+matplotlib = "^3.1.2"
+numpy = "^1.18.1"
+pytest = "^5.3.4"
+tqdm = "^4.41.1"
+scikit-learn = "^0.22.1"
+pandas = "^0.25.3"
+tifffile = "^2019.7.26"
+opencv-python = "^4.1.2"
+dill = "^0.3.1"
+pytorch-lightning = "^0.6.0"
+joblib = "^0.14.1"
+scikit-video = "^1.1.11"
+seaborn = "^0.9.0"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"

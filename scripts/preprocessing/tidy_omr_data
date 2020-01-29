@@ -3,6 +3,9 @@
 exec nix-shell --pure "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" --run "$(printf '%q ' python "$0" "$@")"
 '''
 __doc__ = """Process logs & tail tracking into tidy data"""
+
+# TODO rewrite so doesn't duplicate tidy_tail_data
+# raise(NotImplementedError("not finished"))
 import matplotlib
 matplotlib.use("Agg")
 import numpy as np, scipy, matplotlib.pyplot as plt, pandas as pd, os
@@ -16,11 +19,17 @@ from babelfish.behavior import extract_segments_above_thresh
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.command(context_settings=CONTEXT_SETTINGS)
 @click.option("-t", '--tail-threshold', type=float)
+@click.option("-m", "--old-mat-format", is_flag=True, default=False,
+              help="non-hdf5 .mat file")
 @click.argument("experiment_directory", type=click.Path(exists=True), required=True)
-def main(experiment_directory, tail_threshold):
+def main(experiment_directory, tail_threshold, old_mat_format):
     experiment_directory = experiment_directory + '/'
-    mat_file = glob_one_file(experiment_directory+"raw/*FishVR.mat")
-    stytra_path = glob_one_file(experiment_directory+"tail/*FishVR.hdf5")
+    parquet_path = experiment_directory + '/data_frames/frame_df.parquet'
+    if os.path.exists(parquet_path):
+        if not click.confirm(f"Found {parquet_path}. Continue?"):
+            exit(0)
+    mat_file = glob_one_file(experiment_directory+"raw/*.mat")
+    stytra_path = glob_one_file(experiment_directory+"tail/*.hdf5")
     tyh5_path = glob_one_file(experiment_directory+"*.ty.h5")
     assert type(mat_file)==str and type(stytra_path)==str \
         and type(tyh5_path)==str
@@ -35,8 +44,11 @@ def main(experiment_directory, tail_threshold):
     tb = pd.read_hdf(stytra_path, 'data', mode='r')
 
     nFrames = len(tb)
-
-    mat = h5py.File(mat_file, "r", swmr=True)
+    if old_mat_format:
+        import scipy.io
+        mat = scipy.io.loadmat(mat_file)
+    else:
+        mat = h5py.File(mat_file, "r", swmr=True)
     
     if mat["gWaterVel"].shape[1]!=nFrames:
         # TODO only necessary due to mistake in hdf5_to_video (can remove in future...)
@@ -114,7 +126,8 @@ def main(experiment_directory, tail_threshold):
     if not tail_threshold:
         tail_metric = vigor.interpolate()
         # tail_metric = impute_nan(vigor)
-        vals = np.linspace(0,tail_metric.max(),100)
+        nvals = 100
+        vals = np.linspace(0,tail_metric.max(),nvals)
         exemplars = [closest_idx(tail_metric,v) for v in vals]
         offset = -5
 
@@ -122,7 +135,7 @@ def main(experiment_directory, tail_threshold):
         spec = gridspec.GridSpec(nrows=6, ncols=len(vals), figure=fig)
 
         # fig,ax = plt.subplots(len(percentiles),2, figsize=(10,4))
-        for e,idx in tqdm(enumerate(exemplars)):
+        for e,idx in tqdm(enumerate(exemplars), total=nvals):
             print(f"target: {vals[e]:.4}, actual: {tail_metric[idx]:.4}")
             i = idx + offset
             print(i)
