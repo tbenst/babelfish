@@ -1,8 +1,5 @@
-#!/usr/bin/env bash
-"true" '''\'
-exec nix-shell --pure "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" --run "$(printf '%q ' python "$0" "$@")"
-'''
-__doc__ = """Process logs & tail tracking into tidy data"""
+#!/usr/bin/env python
+
 import matplotlib
 matplotlib.use("Agg")
 import numpy as np, scipy, matplotlib.pyplot as plt, pandas as pd, os

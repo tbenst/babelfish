@@ -1,10 +1,4 @@
-#!/usr/bin/env bash
-"true" '''\'
-exec nix-shell "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" --run "$(printf '%q ' python "$0" "$@")"
-'''
-# https://rosettacode.org/wiki/Multiline_shebang
-# https://github.com/NixOS/nix/issues/2470
-
+#!/usr/bin/env python
 __doc__ = """Convert TIFF_PATHS to .ty.h5 imaging (TxCxZxHxW)"""
 
 #%%

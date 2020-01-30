@@ -40,6 +40,19 @@ ome2nrrd
 
 
 
+# cromwell
+```
+java -Dconfig.file=/home/tyler/code/babelfish/pipelines/local.conf -jar ~/lib/cromwell-48.jar run hello.wdl 
+```
+
+conf:
+        runtime-attributes = """
+            String? image
+            String job_shell = "/bin/sh"
+        """
+        submit = """
+            singularity exec --bind ${cwd}:${docker_cwd} ${singularity} ${job_shell} ${script}
+        """
 
 
 # bash

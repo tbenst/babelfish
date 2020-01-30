@@ -2,15 +2,9 @@ let
   pkgs = import ./nixpkgs.nix;
   python-env = pkgs.python3.buildEnv.override {
     extraLibs = with pkgs.python3Packages; [
-      apache-airflow
       babelfish
       babelfish-models
-      jupyter
-      mypy
-      pyarrow
-      pylint
-      stytra
-      seqnmf
+      numba
     ];
     ignoreCollisions = true;
   };
@@ -29,7 +23,11 @@ pkgs.dockerTools.buildImage {
   name = "babelfish";
   fromImage = busybox;
   diskSize = 1024*25;
-  contents = python-env; 
+  contents = with pkgs; [
+    python-env
+    babelfish-scripts
+  ]; 
+
   runAsRoot = '' 
     #!${pkgs.runtimeShell}
     mkdir -p /data

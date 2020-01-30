@@ -1,9 +1,10 @@
 task hello {
   command {
-    echo 'Hello world!'
+    python -c "import babelfish; print('hi')"
   }
 
   runtime {
+    backend: "local"
     image: "/home/tyler/code/babelfish/babelfish.sif"
   }
 

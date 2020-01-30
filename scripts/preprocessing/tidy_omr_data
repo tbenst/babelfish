@@ -1,8 +1,4 @@
-#!/usr/bin/env bash
-"true" '''\'
-exec nix-shell --pure "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" --run "$(printf '%q ' python "$0" "$@")"
-'''
-__doc__ = """Process logs & tail tracking into tidy data"""
+#!/usr/bin/env python
 
 # TODO rewrite so doesn't duplicate tidy_tail_data
 # raise(NotImplementedError("not finished"))

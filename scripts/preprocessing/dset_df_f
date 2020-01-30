@@ -1,8 +1,4 @@
-#!/usr/bin/env bash
-"true" '''\'
-exec nix-shell --pure "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" --run "$(printf '%q ' python "$0" "$@")"
-'''
-__doc__ = """module docstring"""
+#!/usr/bin/env python
 
 import os
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"

@@ -34,6 +34,7 @@ mkShell {
     # openGL workaround https://github.com/guibou/nixGL/blob/master/default.nix
     # LD_LIBRARY_PATH="${libglvnd}/lib:${nvidiaLibsOnly}/lib:\$LD_LIBRARY_PATH";
     buildInputs = [
+      babelfish-scripts
       python-env
       fd
       ffmpeg

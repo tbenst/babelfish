@@ -25,7 +25,7 @@
       babelfish = python-super.callPackage ../babelfish/default.nix {};
 
       babelfish-models = python-super.callPackage ../babelfish-models/default.nix {};
-      
+            
       seqnmf = python-super.callPackage ./packages/seqnmf.nix {};
 
       stytra = python-super.stytra.overrideAttrs(old: rec {
@@ -98,4 +98,10 @@
       super.python3.override { packageOverrides = self.pythonOverrides; };
 
   })
+
+  (self: super: {
+    babelfish-scripts = super.callPackage ../scripts/default.nix {};
+
+  })
+
 ]

@@ -19,6 +19,11 @@ export MLFLOW_TRACKING_PASSWORD="PASSWORD";
 nvidia-docker build -t bf .
 nvidia-docker run -v ~/code:/code -v /data:/data -v ~/Notebooks:/Notebooks -p 8880:8880 -it bf /bin/bash
 ```
+## build Singularity
+```
+nix-build nix/buildDocker.nix
+singularity build babelfish.sif docker-archive:result
+```
 
 
 ## nix
@@ -74,3 +79,26 @@ nix copy --to 's3://nix-science?profile=nix-cache&region=us-west-2' nixpkgs.hell
     - worker on colfax3/4/helius (creates all tyh5 files)
     - rsync *.h5 back to lensman?
     - primary blob on lensman, one-way no-overwrite backup to Oak
+
+
+## CACHING 
+prefix eg:
+/data/cache/lensman/
+"ssh://users/tyler/zfish_2p/20191101_6f/f2_e1_6f/f2_e1_omr.ty.h5"
+"oak://users/tyler/zfish_2p/20191101_6f/f2_e1_6f/f2_e1_omr.ty.h5"
+  -> /data/cache/oak/users/tyler/zfish_2p/20191101_6f/f2_e1_6f/f2_e1_omr.ty.h5
+
+Each dataset should have SHA hash!! or at least be read-only
+
+then local path
+
+Create helper for hashing a HDF5 dataset:
+```
+def hash_dataset(dataset)
+  hashes = []
+  for c in dataset.chunks:
+    # for contiguous, use a default chunk size
+    # if there's a chunkshape, use this to iterate
+      hashes.append(hash(c))
+  return hash(hashes)
+```

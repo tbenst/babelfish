@@ -1,6 +1,4 @@
-#!/usr/bin/env nix-shell
-#! nix-shell -I nixpkgs=https://github.com/tbenst/nixpkgs/archive/40e11a4fd00b82805e7f647dcbd32aeaa1eeffb5.tar.gz
-#! nix-shell -i python -p "python3.withPackages(ps: with ps; [ moviepy setuptools matplotlib h5py])"
+#!/usr/bin/env python
 
 # TODO add support for NVENC https://github.com/Zulko/moviepy/issues/1014 (will need to use default.nix)
 # https://devblogs.nvidia.com/nvidia-ffmpeg-transcoding-guide/
