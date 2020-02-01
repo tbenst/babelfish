@@ -1,0 +1,1 @@
+nixos buildImage solution for nvidia-docker: https://github.com/NixOS/nixpkgs/issues/78739

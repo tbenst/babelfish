@@ -5,6 +5,7 @@ let
     libsOnly = true;
     kernel = null;
   };
+  
   python-env = pkgs.python3.buildEnv.override {
     extraLibs = with pkgs.python3Packages; [
       apache-airflow
@@ -35,6 +36,7 @@ mkShell {
     # LD_LIBRARY_PATH="${libglvnd}/lib:${nvidiaLibsOnly}/lib:\$LD_LIBRARY_PATH";
     buildInputs = [
       babelfish-scripts
+      cromwell
       python-env
       fd
       ffmpeg

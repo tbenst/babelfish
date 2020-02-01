@@ -1,0 +1,1 @@
+docker run -v $(pwd):/wdl -v /data:/data --user 1000:100 -it cromwell:0.0.2 java -jar /code/cromwell.jar run /wdl/find_files.wdl

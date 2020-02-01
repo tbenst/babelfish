@@ -109,3 +109,5 @@ venv.bak/
 nix/secrets.nix
 *.sif
 result
+cromwell-executions
+cromwell-workflow-logs
