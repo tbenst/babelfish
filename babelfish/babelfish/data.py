@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader, Dataset
 class ZebraFishData(Dataset):
     "B x nFrames x Z x H x W"
     def __init__(self, imaging, auxiliary={},
-                 index_map=None, prev_frames=2, next_frames=1):
+                 index_map=None, prev_frames=2, next_frames=1, dtype=np.float32):
         # use channel for future / prev frames
         self.data = imaging
         self.prev_frames = prev_frames
@@ -15,6 +15,7 @@ class ZebraFishData(Dataset):
         self.auxiliary = auxiliary
         self.aux_vars = list(auxiliary.keys())
         self.index_map = index_map
+        self.dtype = dtype
 
     def __len__(self):
         if self.index_map:
@@ -35,13 +36,13 @@ class ZebraFishData(Dataset):
         Y.update(aux)
         for i in reversed(range(self.prev_frames)):
             ix = idx-i
-            datum = T.tensor(self.data[ix])
+            datum = T.tensor(self.data[ix].astype(self.dtype))
             X["brain"].append(datum)
             for k,v in self.auxiliary.items():
                 X[k].append(v[ix])
         for i in range(1,self.next_frames+1):
             ix = idx+i
-            datum = T.tensor(self.data[ix])
+            datum = T.tensor(self.data[ix].astype(self.dtype))
             Y["brain"].append(datum)
             for k,v in self.auxiliary.items():
                 Y[k].append(v[ix])

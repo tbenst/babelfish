@@ -18,13 +18,13 @@ else:
     model = sys.argv[2]
 
 if model=="skip":
-    from bfm.deep_skip import DeepSkip, train
+    from babelfish_models.models.deep_skip import DeepSkip, train
     Model = DeepSkip
 elif model=='kSVD':
-    from bfm.deep_kSVD import Deep_KSVD, train
+    from babelfish_models.models.deep_kSVD import Deep_KSVD, train
     Model = Deep_KSVD
 elif model=='freeze':
-    from bfm.deep_freeze import DeepFreeze, train, trainBoth
+    from babelfish_models.models.deep_freeze import DeepFreeze, train, trainBoth
     Model = DeepFreeze
     train = trainBoth
 
@@ -89,7 +89,7 @@ from babelfish.plot import interpret, plot_model_vs_real, makePredVideo, MSEbyDi
 
 from babelfish.data import ZebraFishData
 # from babelfish.deep_kSVD import Deep_KSVD, train
-from babelfish.half_precision import network_to_half
+from babelfish_models.half_precision import network_to_half
 
 fishIdx = [("e", 2),  ("e", 5), ("c", 1),  ("c", 6),  ("enp", 1), ("enp", 5)]
 

@@ -8,10 +8,14 @@ let
 in
 pkgs.singularity-tools.buildImage {
   name = "babelfish"; 
-  diskSize = 1024*100;
+  diskSize = 1024*20;
   contents = with pkgs; [
     cromwell
     fd
     openjdk8
   ]; 
+  runScript = ''
+    #!${pkgs.stdenv.shell}
+    ${pkgs.openjdk8}/lib/openjdk/bin/java -jar ${cromwell}
+  '';
 }

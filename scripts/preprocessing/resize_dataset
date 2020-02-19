@@ -5,7 +5,7 @@
 import click, os
 import numpy as np
 import babelfish as bf
-from babelfish.helpers import glob_one_file
+from babelfish.helpers import glob_one_file, print_help
 import tables
 from tqdm import tqdm
 
@@ -20,9 +20,11 @@ from tqdm import tqdm
 @click.option("-c", "--compression-level", default=3, help="compression for zstd")
 def main(h5_path, experiment_directory, dataset, out_dataset,
          compression_level: int):
-    if not h5_path:
+    if not h5_path and experiment_directory:
         experiment_directory = experiment_directory + '/'
         h5_path = glob_one_file(experiment_directory+"*.ty.h5")
+    else:
+        print_help()
 
     print("resizing")
     with tables.open_file(h5_path, 'a') as tyh5:
@@ -84,9 +86,9 @@ def main(h5_path, experiment_directory, dataset, out_dataset,
                 tables.Atom.from_dtype(dtype), shape=(nframes, C, Z, newH, newW),
                 filters=dset_filter)
 
-            for s in tqdm(range(0,nFrames)):
-                new_stack = bf.helpers.resize_4d(imaging[s], 0.5, 0.5)
-                dset[s] = new_stack
+            for s in tqdm(range(0,nFrames, chunk_size)):
+                new_stack = bf.helpers.resize_4d(imaging[s:s+chunk_size], 0.5, 0.5)
+                dset[s:s+chunk_size] = new_stack
 
         else:
             raise(NotImplemented("wrong dimensions", shape))

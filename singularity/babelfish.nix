@@ -11,7 +11,7 @@ let
 in
 pkgs.singularity-tools.buildImage {
   name = "babelfish"; 
-  diskSize = 1024*25;
+  diskSize = 1024*50;
   contents = with pkgs; [
     python-env
     babelfish-scripts

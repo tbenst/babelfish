@@ -34,9 +34,13 @@ mkShell {
     QT_PLUGIN_PATH = "${qt5.qtbase}/${qt5.qtbase.qtPluginPrefix}";
     # openGL workaround https://github.com/guibou/nixGL/blob/master/default.nix
     # LD_LIBRARY_PATH="${libglvnd}/lib:${nvidiaLibsOnly}/lib:\$LD_LIBRARY_PATH";
+    
+    PATH = lib.concatStringsSep ":${./scripts}/" (["$PATH" ] ++ (builtins.attrNames 
+        (lib.filterAttrs (n: v: v == "directory") (builtins.readDir ./scripts)))
+    );
+
     buildInputs = [
       babelfish-scripts
-      cromwell
       python-env
       fd
       ffmpeg

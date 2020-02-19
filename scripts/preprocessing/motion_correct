@@ -1,0 +1,71 @@
+#!/usr/bin/env python
+
+#%%
+import click, os
+import numpy as np, matplotlib.pyplot as plt
+import tables
+from tqdm import tqdm
+
+from past.utils import old_div
+import os
+import logging
+import caiman as cm
+from caiman.motion_correction import MotionCorrect, tile_and_correct, motion_correction_piecewise
+
+raise(NotImplementedError())
+@click.command()
+@click.argument("h5_path", type=click.Path(exists=True), required=False)
+@click.option("-e", "--experiment-directory", type=click.Path(exists=True))
+@click.option("-d", "--dataset", type=str, required=False,
+    default="/imaging/motion_corrected_small")
+@click.option("-o", "--out-dataset", type=str, required=False,
+    default="/imaging/motion_corrected_small_padded")
+@click.option("-c", "--compression-level", default=3, help="compression for zstd")
+def main(h5_path, experiment_directory, dataset, out_dataset,
+         compression_level: int):
+    if (not h5_path):
+        if experiment_directory:
+            experiment_directory = experiment_directory + '/'
+            h5_path = glob_one_file(experiment_directory+"*.ty.h5")
+        else:
+            print_help()
+
+    with tables.open_file(h5_path, 'a') as tyh5:
+        imaging = tyh5.root[dataset]
+        # image = tyh5.root[dataset][0]
+        shape = imaging.shape
+        dtype = imaging.dtype
+        # dtype = image.dtype
+        nFrames = shape[0]
+        # assert dtype in [np.float32, np.float64]
+        chunk_size = bf.helpers.chunk_size_for_memory_quota(imaging)
+        dset_filter = tables.filters.Filters(complevel=compression_level, complib='blosc:zstd')
+
+        if len(shape)>2:
+            z = (0,) * (len(shape)-2)
+            new_stack = pad_imaging(imaging[z][None],height,width) # 3D
+            
+            newH, newW = new_stack.shape[-2:]
+            print(f"Padding images from ({shape[-2]}, {shape[-1]}) to ({newH}, {newW})")
+            if out_dataset in tyh5:
+                click.confirm(f'Do you want to overwrite {out_dataset}?',
+                    abort=True)
+                tyh5.remove_node(out_dataset)
+            group, dset_name = os.path.split(out_dataset)
+            dset = tyh5.create_carray(group, dset_name,
+                tables.Atom.from_dtype(dtype), shape=(*shape[:-2], newH, newW),
+                filters=dset_filter)
+
+            for s in tqdm(range(0,nFrames, chunk_size)):
+                dset[s:s+chunk_size] = bf.helpers.pad_imaging(imaging[s:s+chunk_size], 256, 256)
+
+        else:
+            raise(NotImplemented("wrong dimensions", shape))
+
+        # copy attributes        
+        for name in imaging._v_attrs._v_attrnamesuser:
+            dset._v_attrs[name] = imaging._v_attrs[name]
+
+
+if __name__ == '__main__':
+    main()

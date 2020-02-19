@@ -1,5 +1,5 @@
 let
-  pkgs = import ./nixpkgs.nix;
+  pkgs = import ../nix/nixpkgs.nix;
   python-env = pkgs.python3.buildEnv.override {
     extraLibs = with pkgs.python3Packages; [
       babelfish

@@ -5,6 +5,7 @@ one set of oir per $FISH_$EXPERIMENT_$META ?
 f3_e1_omr and f3_structural for example
 
 TODO: x_um_per_pixel and co should be on RAW not imaging
+TODO: replace ty.h5 with NWB? https://nwb-schema.readthedocs.io/en/stable/index.html
 
 
   DATE=2020-01-20

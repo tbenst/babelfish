@@ -44,7 +44,7 @@ from babelfish.data import ZebraFishData
 
 from babelfish.data import ZebraFishData
 # from babelfish.deep_kSVD import Deep_KSVD, train
-from babelfish.half_precision import network_to_half
+from babelfish_models.half_precision import network_to_half
 
 # T.backends.cudnn.benchmark = False
 T.backends.cudnn.benchmark = True # not safe for determinism
@@ -73,7 +73,7 @@ half=False
 @click.option("--lr", type=float, default=1e-3)
 @click.option("--n-epochs", type=int, default=15)
 @click.option("--n-embedding", type=int, default=20)
-@click.option("--batch-size", type=int, default=64)
+@click.option("--batch-size", type=int, default=8)
 @click.option("--multi-gpu/--single-gpu", default=False)
 @click.option("--gpus", type=str, default=False,
     help="Comma separated GPUs, e.g. '2,3'")
@@ -81,24 +81,33 @@ half=False
 def main(tyh5_path, model, dataset,
     num_workers, prev_frames, next_frames, kl_lambda, sparse_lambda, lr,
     n_epochs, n_embedding, batch_size, multi_gpu, gpus, seed):
+    """Main script to train a model.
+    
+    Example usage: 
+    nix-shell ~/code/babelfish/shell.nix --run 'train --batch-size 8 --multi-gpu --gpus "1,2" *.h5 skip "/imaging/small_padded"'
+    """
     T.manual_seed(seed)
     np.random.seed(seed)
     if model=="skip":
-        from bfm.deep_skip import DeepSkip, train
+        from babelfish_models.models.deep_skip import DeepSkip, train
         Model = DeepSkip
     elif model=='kSVD':
-        from bfm.deep_kSVD import Deep_KSVD, train
+        from babelfish_models.models.deep_kSVD import Deep_KSVD, train
         Model = Deep_KSVD
     elif model=='freeze':
-        from bfm.deep_freeze import DeepFreeze, train, trainBoth
+        from babelfish_models.models.deep_freeze import DeepFreeze, train, trainBoth
         Model = DeepFreeze
         train = trainBoth
+        
+    if gpus:
+        gpus = list(map(lambda x: int(x), gpus.split(",")))
+    
     cuda = True
     with h5py.File(tyh5_path, 'r', swmr=True) as tyh5:
         # TODO: not tested for volumes
         imaging = tyh5[dataset]
-        assert len(imaging.shape) == 4
-        nFrames, nZ, H, W = imaging.shape
+        assert len(imaging.shape) == 5
+        nFrames, nC, nZ, H, W = imaging.shape
         # TODO why 0.31% test??
         tvt_split = train_test_split(nFrames, nchunks=20)
         total_examples = sum([len(x) for x in tvt_split.values()])
@@ -110,10 +119,10 @@ def main(tyh5_path, model, dataset,
         test_data = ZebraFishData(imaging, {},
                         tvt_split['test'], prev_frames,next_frames)
         tensor = T.cuda.FloatTensor
-        conv_model = Model(nZ,H,W,n_embedding,prev_frames,next_frames, tensor=tensor)
+        conv_model = Model(nC,nZ,H,W,n_embedding,prev_frames,next_frames, tensor=tensor)
         conv_model.cuda()
         if multi_gpu:
-            conv_model = nn.DataParallel(conv_model)
+            conv_model = nn.DataParallel(conv_model, device_ids=gpus)
         
         # log params
 
@@ -122,7 +131,7 @@ def main(tyh5_path, model, dataset,
             # TODO make automatic, perhaps by using mlflow run
             mlflow.log_params({
                 "nParams": nParams,
-                "tyh5_path": tyh5_path,
+                "tyh5_path": os.path.abspath(tyh5_path),
                 "model": model,
                 "dataset": dataset,
                 "prev_frames": prev_frames,

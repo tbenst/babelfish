@@ -117,31 +117,35 @@ def resize_4d(images, fx, fy, interpolation=cv2.INTER_LINEAR, out="ndarray",
     return new
 
 def pad_imaging(imaging, H, W):
+    """Zero pad imaging up to H, W. Assumes last two dims are H,W."""
     try:
-        assert imaging.shape[2] <= H and imaging.shape[3] <= W
+        assert imaging.shape[-2] <= H and imaging.shape[-1] <= W
     except Exception as e:
-        print("H ({}) and W ({}) must be greater than {} and {}".format(H, W, imaging.shape[2], imaging.shape[3]))
+        print("H ({}) and W ({}) must be greater than {} and {}".format(H, W, imaging.shape[-2], imaging.shape[-1]))
         raise e
-    new_imaging = np.zeros([imaging.shape[0],imaging.shape[1],H,W])
-    if imaging.shape[2]==H:
+    shape = imaging.shape
+    new_imaging = np.zeros([*shape[:-2],H,W])
+    if imaging.shape[-2]==H:
         pad_top = False
+        pad_bottom = False
     else:
-        pad_top = int(np.floor((H-imaging.shape[2])/2))
-        pad_bottom = int(np.ceil((H-imaging.shape[2])/2))
-    if imaging.shape[3]==W:
+        pad_top = int(np.floor((H-imaging.shape[-2])/2))
+        pad_bottom = int(np.ceil((H-imaging.shape[-2])/2))
+    if imaging.shape[-1]==W:
         pad_left = False
+        pad_right = False
     else:
-        pad_left = int(np.floor((W-imaging.shape[3])/2))
-        pad_right = int(np.ceil((W-imaging.shape[3])/2))
+        pad_left = int(np.floor((W-imaging.shape[-1])/2))
+        pad_right = int(np.ceil((W-imaging.shape[-1])/2))
 
     if not pad_right and not pad_bottom:
         return imaging
     elif pad_right and not pad_bottom:
-        new_imaging[:,:,:,pad_left:(-pad_right)] = imaging
+        new_imaging[...,pad_left:(-pad_right)] = imaging
     elif pad_bottom and not pad_right:
-        new_imaging[:,:,pad_top:(-pad_bottom),:] = imaging
+        new_imaging[...,pad_top:(-pad_bottom),:] = imaging
     else:
-        new_imaging[:,:,pad_top:(-pad_bottom),pad_left:(-pad_right)] = imaging
+        new_imaging[...,pad_top:(-pad_bottom),pad_left:(-pad_right)] = imaging
     return new_imaging.astype(np.float32)
 
 def pad_image(image, H, W):
