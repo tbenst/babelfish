@@ -1,0 +1,12 @@
+#!/usr/bin/env python
+import click
+
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+@click.group()
+@click.pass_context
+@click.command(context_settings=CONTEXT_SETTINGS)
+def main(ctx):
+    print("hi")
+    
+if __name__ == '__main__':
+    main()
