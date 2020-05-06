@@ -17,9 +17,10 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option('-d', '--dset', default="/imaging/small",
               help="which HDF5 dataset to use")
 @click.option("-e", "--experiment-directory", type=click.Path(exists=True))
-def main(tyh5_path, experiment_directory, gpu, dset, compression_level):
+@click.option("-w", "--window-size", type=int, default=None)
+def main(tyh5_path, experiment_directory, gpu, dset, compression_level,
+         window_size):
     "Must specify TYH5_PATH or pass --experiment-directory"
-    experiment_directory = experiment_directory + '/'
     # must come before torch import
     os.environ["CUDA_VISIBLE_DEVICES"]=gpu
     from babelfish.helpers import tables_df_f
@@ -30,10 +31,13 @@ def main(tyh5_path, experiment_directory, gpu, dset, compression_level):
     group, name = os.path.split(dset)
     
     if not tyh5_path:
+        experiment_directory = experiment_directory + '/'
         tyh5_path = glob_one_file(experiment_directory+"*.ty.h5")
     with tables.open_file(tyh5_path, 'a', swmr=True) as h5:
         imaging = h5.root[dset]
-        frame_rate = h5.root.imaging._v_attrs["frame_rate"]
+        if not window_size and "frame_rate" in h5.root.imaging._v_attrs:
+            frame_rate = h5.root.imaging._v_attrs["frame_rate"]
+            window_size = int(frame_rate*60*5) # 5 minutes
         dset_filter = tables.filters.Filters(complevel=compression_level,
                                              complib='blosc:zstd')
         out_dset = dset+'_df_f'
@@ -46,8 +50,7 @@ def main(tyh5_path, experiment_directory, gpu, dset, compression_level):
             imaging.atom, shape=imaging.shape,
             filters=dset_filter)
         
-        winsize = int(frame_rate*60*5) # 5 minutes
-        tables_df_f(imaging, out, winsize, 20)
+        tables_df_f(imaging, out, window_size, 20)
 
         
     

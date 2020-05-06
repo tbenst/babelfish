@@ -9,7 +9,7 @@
 
     // "nixEnvSelector.nixShellConfig": "~/code/babelfish/default.nix",
     // "nixEnvSelector.nixShellConfig": "${workspaceRoot}/conda.nix",
-    "nixEnvSelector.nixShellConfig": "${workspaceRoot}/shell.nix",
+    "nixEnvSelector.nixShellConfig": "${workspaceRoot}/conda.nix",
     "files.associations": {
         "main": "python",
         "btf_2_hdf5_small": "python",

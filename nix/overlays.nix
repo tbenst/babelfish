@@ -22,11 +22,19 @@
   (self: super: {
 
     pythonOverrides = python-self: python-super: {
+      # Custon to babelfish
+
       babelfish = python-super.callPackage ../babelfish/default.nix {};
 
       babelfish-models = python-super.callPackage ../babelfish-models/default.nix {};
+
+      hdmf = python-super.callPackage ./packages/hdmf.nix {};
+            
+      hdf5plugin = python-super.callPackage ./packages/hdf5plugin.nix {};
             
       seqnmf = python-super.callPackage ./packages/seqnmf.nix {};
+
+      pynwb = python-super.callPackage ./packages/pynwb.nix {};
 
       stytra = python-super.stytra.overrideAttrs(old: rec {
         pname = "stytra";

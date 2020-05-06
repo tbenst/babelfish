@@ -102,3 +102,10 @@ def hash_dataset(dataset)
       hashes.append(hash(c))
   return hash(hashes)
 ```
+
+
+### misc
+if 
+  `sudo: /run/current-system/sw/bin/sudo must be owned by uid 0 and have the setuid bit set`
+then
+  `/run/wrappers/bin/sudo`

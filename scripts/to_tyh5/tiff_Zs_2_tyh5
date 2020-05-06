@@ -1,0 +1,120 @@
+#!/usr/bin/env python
+__doc__ = """Convert TIFF_PATHS to .ty.h5 imaging (TxCxZxHxW)"""
+
+#%%
+import sys
+
+import tifffile, click, re, os
+from tqdm import tqdm
+import numpy as np
+from babelfish.helpers import resize_3d, resize_4d, compression_opts, \
+    resize_from_tiff, read_tiff_path, assign_tiff_Z_to_dset, \
+    assign_stack_to_dset, sort_by_z_plane
+from scipy.ndimage.filters import minimum_filter1d
+import tables
+
+from functools import partial
+from moviepy.video.io.bindings import mplfig_to_npimage
+from typing import List
+# %%
+
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+@click.command(context_settings=CONTEXT_SETTINGS)
+@click.argument("tiff_paths", type=click.Path(exists=True), nargs=-1)
+@click.option("-o", "--output-path", type=click.Path(exists=False),
+              help="a .ty.h5 file")
+@click.option("-l", "--channel-labels", type=str,
+              help='comma separated e.g. "PV (GCaMP),PyR (RCaMP)"')
+@click.option("-r", "--frame-rate", type=float, help="Hz")
+@click.option("-s", "--small/--no-small", default=False, help="whether to make 256x256 images")
+@click.option("-c", "--compression-level", default=3, help="compression for zstd")
+@click.option("-u", "--um-per-pixel", type=float)
+def tiff_Zs_2_tyh5(tiff_paths: List, output_path: str, small: bool,
+        channel_labels: str, frame_rate: float, um_per_pixel: float, compression_level: int):
+    """Convert TIFF_PATHS to .ty.h5 imaging (TxCxZxHxW)
+    
+    TIFF_PATHS: one or more file paths of 3D/4D tiffs. Must be (ZxWxH) or (CxZxWxH)
+    
+    Each tiff should be a separate time step.
+    """
+    if len(tiff_paths)==0:
+        # print help and exit
+        ctx = click.get_current_context()
+        click.echo(ctx.get_help())
+        exit(0)
+    if output_path is None:
+        name, _ = os.path.splitext(tiff_paths[0])
+        name, _ = os.path.splitext(name) # handle two extensions
+        output_path = name + ".ty.h5"
+    # with h5py.File(output_path, 'w') as tyh5:
+    if os.path.exists(output_path):
+        mode = click.prompt(
+            f'{output_path} exists.\nOverwrite, append or cancel? (w,a,c):',
+                             default='a')
+        if mode=='c':
+            exit(0)
+    else:
+        mode = 'w'
+
+    with tables.open_file(output_path, mode=mode) as tyh5:
+        print(f"opened {output_path}")
+        if not "version" in tyh5.root._v_attrs:
+            tyh5.root._v_attrs["version"] = "0.1.0"
+        dset_filter = tables.filters.Filters(complevel=compression_level, complib='blosc:zstd')
+        tiff_paths = sort_by_z_plane(tiff_paths)
+        Z = len(tiff_paths)
+        assert Z > 0
+
+        tiff = read_tiff_path(tiff_paths[0])
+        tiff_shape = tiff.series[0].shape
+        tiff_dtype = tiff.pages[0].dtype
+        print("SHAPE", tiff_shape)
+        if len(tiff_shape)==3:
+            T, H, W = tiff_shape
+            C = 1
+        elif len(tiff_shape)==4:
+            raise(NotImplementedError("TODO"))
+            # switch to T x C?
+            C, T, H, W = tiff_shape
+        else:
+            raise(NotImplementedError(f"bad tiff ndims of {len(tiff_shape)}"))
+
+        imaging_g = tyh5.create_group('/', 'imaging')
+        dset_raw = tyh5.create_carray(imaging_g, 'raw',
+            tables.Atom.from_dtype(tiff_dtype), shape=(T, C, Z, H, W),
+            filters=dset_filter)
+        assign_tiff_Z_to_dset(dset_raw, tiff, Z=0)
+        dset_raw.attrs['dimensions'] = "TCZHW"
+        
+        imaging_attrs = tyh5.root["imaging"]._v_attrs
+        imaging_attrs['nFrames'] = T
+        imaging_attrs['nZ'] = Z
+        
+        if frame_rate:
+            imaging_attrs["frame_rate"] = frame_rate
+        
+        if um_per_pixel:
+            imaging_attrs["x_um_per_pixel"] = um_per_pixel
+            imaging_attrs["y_um_per_pixel"] = um_per_pixel
+            imaging_attrs["z_um_per_pixel"] = um_per_pixel
+        if small:
+            raise(NotImplementedError("TODO"))
+        if channel_labels:
+            raise(NotImplementedError("TODO"))
+            channel_labels = channel_labels.split(",")
+            for i, label in enumerate(channel_labels):
+                dset_raw.attrs[f"channel_{i}"] =  label
+                if small:
+                    dset_small.attrs[f"channel_{i}"] =  label
+
+        for i, tp in tqdm(enumerate(tiff_paths[1:],1),
+                          total=len(tiff_paths[1:])):
+            tiff = read_tiff_path(tp)
+            assign_tiff_Z_to_dset(dset_raw, tiff, Z=i)
+            if small:
+                raise(NotImplementedError("TODO"))
+                stack = resize_from_tiff(tiff)
+                assign_stack_to_dset(dset_small, stack, channel=i)
+
+if __name__ == '__main__':
+    tiff_Zs_2_tyh5()

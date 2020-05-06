@@ -7,7 +7,7 @@ MLFLOW_TRACKING_USERNAME = os.environ.get("MLFLOW_TRACKING_USERNAME")
 MLFLOW_TRACKING_PASSWORD = os.environ.get("MLFLOW_TRACKING_PASSWORD")
 
 def load_model_from_run_info(run_info, cuda=True, device_id=None,
-    artifact_path="/models"):
+    model_path="/models/epoch/0"):
     # TODO cache this / wrap all mlflow with some sort of memoization?
     # have babelfish-specific cache folder in $XDG_CACHE_HOME
     """Load pytorch model from mlflow URI
@@ -22,7 +22,7 @@ def load_model_from_run_info(run_info, cuda=True, device_id=None,
         pytorch module
     """    
     artifact_uri = run_info.artifact_uri
-    model_uri = artifact_uri + artifact_path
+    model_uri = artifact_uri + model_path
 
     print("loading ", model_uri)
     model = mlflow.pytorch.load_model(model_uri, map_location=device_id)

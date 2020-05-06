@@ -99,3 +99,48 @@ airflow scheduler
 need to transpose T & Z...?
 
 working on 20191101, 20191031, 20191017
+
+
+## process data from Ritchie (2018)
+cd /data/ritchie
+name='f080218_1'
+cd $name && nix-shell --pure ~/code/babelfish/shell.nix --run "tiff_Zs_2_tyh5 -o $name.ty.h5 *.tif"
+nix-shell --pure ~/code/babelfish/shell.nix --run 'caiman_2_tyh5 -s "." .'
+cd .. && nix-shell --pure ~/code/babelfish/shell.nix --run "process_aaron_nidaq $name -m -l $name.mat -b $name.bin"
+nix-shell --pure ~/code/babelfish/shell.nix --run "hdf5_to_video $name/$name.ty.h5 /imaging/raw --max-z
+hdfview $name/$name.ty.h5
+
+### stytra
+f072018_2
+
+### ran through ritchie_shock.sh
+f080218_1
+f090418_2
+f090418_3
+f090418_6
+f090618_2
+f090618_4
+
+y'
+### Problem
+f112018_1
+
+### TODO
+groupings preserved from notebook...
+
+name="f090418_2"
+name="f090418_3"
+name="f090418_6"
+name="f090618_2"
+name="f090618_4"
+
+can't find data for next two groups...
+name="f112018_1"
+name="f112018_2"
+name="f112018_3"
+
+name="f112018_4"
+name="f112018_5"
+name="f112018_7"
+
+f072018_1 f081318_3 f072018_2 f080318_1 f081418_1 f090618_1 f072318_1 f081318_1 f081418_2 f090418_4 f072418_4 f081318_2 f090418_1 f090418_5 f090618_3

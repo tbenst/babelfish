@@ -44,6 +44,7 @@ mkShell {
       python-env
       fd
       ffmpeg
+      less
       fzf
       strace
       zstd

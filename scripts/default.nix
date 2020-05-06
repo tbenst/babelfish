@@ -2,6 +2,7 @@
 , fd
 , ffmpeg
 , fzf
+, less
 , strace
 , zstd
 , bash
@@ -9,9 +10,12 @@
 let 
   python-env = python3.buildEnv.override {
     extraLibs = with python3Packages; [
+      av
       babelfish
       babelfish-models
+      fire
       numba
+      pynwb
     ];
     ignoreCollisions = true;
   };
@@ -23,6 +27,7 @@ stdenv.mkDerivation {
     fd
     ffmpeg
     fzf
+    less
     strace
     zstd
     bash
@@ -31,7 +36,10 @@ stdenv.mkDerivation {
   # unpackPhase = "true";
   installPhase = ''
     mkdir -p $out/bin
+    mkdir -p $out/lib
+    touch $out/lib/__init__.py
     find $src -executable -type f -exec cp -t $out/bin {} +
+    find $src -name "*.py" -exec cp -t $out/lib {} +
   '';
   # doCheck = false;
 }

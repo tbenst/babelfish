@@ -1,31 +1,119 @@
-#!/usr/bin/env bash
-"true" '''\'
-exec nix-shell --pure "$(dirname ${BASH_SOURCE[0]})/../../shell.nix" --run "$(printf '%q ' python "$0" "$@")"
+#!/usr/bin/env python
+__doc__ = '''
+for example:
+nix-shell --pure ~/code/babelfish/shell.nix --run 'process_aaron_nidaq f072018_1 -m -l f072018_1.mat -b f072018-1.bin'
 '''
-
-import os, click
+import os, click, sys
 from glob import glob
-import tifffile
+import tifffile, matplotlib.pyplot as plt
 import h5py
 from importlib import reload 
 from babelfish.helpers import glob_one_file
-
 import numpy as np
 import time
-import nilogger_binary_log_parser as niparse
-
 from datetime import datetime
 from datetime import timedelta
 import scipy.io
+import pandas as pd
+import pyarrow.parquet as pq
+import pyarrow as pa
+
+from pathlib import Path
+libpath = Path(os.path.dirname(os.path.realpath(__file__))) / '..' / 'lib'
+sys.path.append(str(libpath))
+import nilogger_binary_log_parser as niparse
+import trigger_analysis as trigger_analysis
+from ustim_log_parser import detectThresholdCrossings
+
+def process_shock_times(vr_mat, daq_time, daq_channels, tailcam_st, tailcam_et):
+    """
+    vr_mat: pre v7 matlab .mat
+    tyh5: an open h5py file
+    code adapted from Aaron Andalman's 2p_Fish_1_Process_LogFiles.ipynb
+    """
+    #shock times are stored as matlab datenums 
+    shock_st_mattime = [shockinfo['t'][0][0][0][0] for shockinfo in vr_mat['gStartShockInfo'][0]]
+    shock_et_mattime = [shockinfo['t'][0][0][0][0] for shockinfo in vr_mat['gStopShockInfo'][0]]
+
+    #frame times are stored as matlab datevecs
+    tail_frame_datevecs = np.array(vr_mat['gFrameTime'])
+    tail_frame_dayfrac = tail_frame_datevecs[:,3] / 24 + tail_frame_datevecs[:,4] / (24*60) + tail_frame_datevecs[:,5]/(24*60*60)
+
+    #to syncronize with nidaq log file, we'll get the deltaT (seconds) between each shock an the nearest
+    #tail cam frame.
+    shock_st = [];shock_et = []
+    for st,et in zip(shock_st_mattime,shock_et_mattime):
+        #find nearest camera frame
+        nearestframe = np.argmin(np.abs(tail_frame_dayfrac - (st%1)))
+        #add deltatime from nearest frame to the log file time of that frame
+        shock_st.append(tailcam_st[nearestframe] - ((tail_frame_dayfrac[nearestframe] - (st%1))*24*60*60))
+        shock_et.append(tailcam_et[nearestframe] - ((tail_frame_dayfrac[nearestframe] - (et%1))*24*60*60))
+    shock_st = np.array(shock_st)
+    shock_et = np.array(shock_et)
+    shock_st_req = shock_st
+    shock_et_req = shock_et
+
+    #get current traces  fron nidaq log based on shock times extracted from fishvr matlab log   
+    at, ad = trigger_analysis.extract_triggered_waveforms(daq_time, daq_channels[2,:], shock_st_req, window=[-1,1],interp='prev')
+
+    peak_volt = ad.max(axis=0).flatten()
+
+    #More precisely determine shock times by looking at nidaq voltage trace
+    thres = daq_channels[2,:].mean() + 5*daq_channels[2,:].std() 
+    shock_st_real = []
+    shock_et_real = []
+    mean_volt = []
+    for nTrace in range(ad.shape[2]):
+        [s, e] = detectThresholdCrossings(ad[:,:,nTrace], thres, bAbove=True)
+        if len(s)>1 or len(e)>1:
+            #Remove very brief threshold crossings
+            bDura = (np.array(e) - np.array(s))>2
+            s = np.array(s)[bDura]
+            e = np.array(e)[bDura]
+            if len(s)>0:
+                #merge threshold crossings separated by less than 1s
+                isi = s[1:] - e[:-1]
+                bISI = isi>(.1*frame_rate) #shocks events are separated by at least 1s.
+                bsISI = np.insert(bISI,0,True)
+                beISI = np.append(bISI,[True],axis=0)
+                s = s[bsISI]
+                e = e[beISI]
+                if len(s)>1 or len(e)>1:
+                    raise('failed to find just one shock')
+        if len(s)>0:
+            shock_st_real.append(shock_st_req[nTrace] + at[s[0]])
+            shock_et_real.append(shock_st_req[nTrace] + at[e[0]])
+            mean_volt.append(ad[s[0]:e[0],:,nTrace].mean())
+        else:
+            shock_st_real.append(np.nan)
+            shock_et_real.append(np.nan)
+            mean_volt.append(np.nan)
+
+    shock_st_real = np.array(shock_st_real)
+    shock_et_real = np.array(shock_et_real)
+    mean_volt = np.array(mean_volt)
+    shock_dura = shock_et_real-shock_st_real
+    shock_st = shock_st_real[shock_dura > 0.025]
+    shock_et = shock_et_real[shock_dura > 0.025]
+
+    return {"shock_st": shock_st, "shock_et": shock_et, "thres": thres,
+            "shock_st_real": shock_st_real, "shock_et_real": shock_et_real,
+            "shock_st_req": shock_st_req, "shock_et_req": shock_et_req, 
+            "raw_t": at, "raw_volt": ad, "peak_volt": peak_volt, 
+            "mean_volt": mean_volt, "shock_dura": shock_dura}
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.command(context_settings=CONTEXT_SETTINGS)
 @click.argument("experiment_directory", type=click.Path(exists=True),
                 required=False)
 @click.option("-n", "--num_frame_avg", default=1)
+@click.option("-s", "--subfolder", default="raw")
+@click.option("-l", "--vr-log", default=None)
+@click.option("-b", "--binary-log", default=None)
 @click.option("-m", "--old-mat-format", is_flag=True, default=False,
               help="non-hdf5 .mat file")
-def main(experiment_directory, num_frame_avg, old_mat_format):
+def main(experiment_directory, subfolder, vr_log, binary_log,
+         num_frame_avg, old_mat_format):
     """Extract tailcam and 2P frame times, and save to .ty.h5
     
     binary_log: .bin file
@@ -41,8 +129,15 @@ def main(experiment_directory, num_frame_avg, old_mat_format):
         exit(0)
     experiment_name, _ = os.path.split(experiment_directory)
     experiment_directory = experiment_directory + '/'
-    vr_log = glob_one_file(experiment_directory+"raw/*.mat")
-    binary_log = glob_one_file(experiment_directory+"raw/*.bin")
+    if vr_log is None:
+        vr_log = glob_one_file(experiment_directory+f"{subfolder}/*.mat")
+    else:
+        vr_log = experiment_directory + vr_log
+        
+    if binary_log is None:
+        binary_log = glob_one_file(experiment_directory+f"{subfolder}/*.bin")
+    else:
+        binary_log = experiment_directory + binary_log
     tyh5_path = glob_one_file(experiment_directory + "/*.ty.h5")
     assert type(vr_log)==str
     assert type(binary_log)==str
@@ -52,10 +147,10 @@ def main(experiment_directory, num_frame_avg, old_mat_format):
     #raw data and processed tail data
     if old_mat_format:
         import scipy.io
-        vr_h5 = scipy.io.loadmat(vr_log)
+        vr_mat = scipy.io.loadmat(vr_log)
     else:
-        vr_h5 = h5py.File(vr_log)
-    print("tail frames: ", 'gROI' in list(vr_h5.keys()))
+        vr_mat = h5py.File(vr_log, mode='r')
+    print("tail frames embedded in file: ", 'gROI' in list(vr_mat.keys()))
     print(f"opening {tyh5_path} ...")
     tyh5 = h5py.File(tyh5_path, "a", swmr=True)
     if 'frame_start' in list(tyh5['imaging'].keys()):
@@ -75,9 +170,9 @@ def main(experiment_directory, num_frame_avg, old_mat_format):
 
     # Load the ni log file
     daq_time, daq_channels, fs = niparse.parse_matlab_daq_binary_log(binary_log,num_channels=3)
-        #Row 0 is 2P
-        #Row 1 is tailcam
-        #Row 2 is current.
+    #Row 0 is 2P
+    #Row 1 is tailcam
+    #Row 2 is current.
 
     # start_time_2p = 850*1000
     start_time_2p = None #None if beginning of log file is fine.
@@ -100,9 +195,9 @@ def main(experiment_directory, num_frame_avg, old_mat_format):
     # tailcam_st = tailcam_st[]
     print("Tailcam log: Parsed %d tail start times"%(tailcam_st.shape[0]))
     if old_mat_format:
-        num_video_frames = vr_h5["gFrameNum"].shape[0]
+        num_video_frames = vr_mat["gFrameNum"].shape[0]
     else:
-        num_video_frames = vr_h5["gFrameNum"].shape[1]
+        num_video_frames = vr_mat["gFrameNum"].shape[1]
     frame_rate = 1/np.diff(tailcam_st).mean()
     print("Number of tail frames in vr log: %d at %f fps." % (num_video_frames,frame_rate))
     print('Unless the tailcam display is off, this will slightly exceed the # of tail video frames')
@@ -119,12 +214,85 @@ def main(experiment_directory, num_frame_avg, old_mat_format):
         tyh5.create_dataset("/tailcam/frame_start", data=tailcam_st)
         tyh5.create_dataset("/tailcam/frame_end", data=tailcam_et)
         # we already have a movie...
-        # tyh5.create_dataset("/tailcam/frames", data=vr_h5["gROI"][:,0])
+        # tyh5.create_dataset("/tailcam/frames", data=vr_mat["gROI"][:,0])
         
         tyh5.create_dataset("/imaging/frame_start", data=frame_st)
         tyh5.create_dataset("/imaging/frame_end", data=frame_et)
         tyh5["/imaging"].attrs["num_frame_avg"] = num_frame_avg
         tyh5["/imaging"].attrs["frame_rate"] = twoP_frame_rate
+        
+        if not "experiment" in list(tyh5.keys()):
+            experiment_group = tyh5.create_group("/experiment")
+        else:
+            experiment_group = tyh5["/experiment"]
+
+        if len(vr_mat["gStartShockInfo"])==0:
+            print("no shock times recorded")
+        else:
+            results = process_shock_times(vr_mat, daq_time, daq_channels, tailcam_st, tailcam_et)
+            for key, val in results.items():
+                if key in experiment_group:
+                    del experiment_group[key]
+                experiment_group.create_dataset(key, data=val)
+                
+            plot_dir = experiment_directory+f"plots"
+            os.makedirs(plot_dir, exist_ok=True)
+            
+            f = plt.figure()
+            plt.subplot(2,1,1)
+            plt.plot(results["raw_t"], results["raw_volt"][:,0,:])
+            plt.subplot(2,1,2)
+            plt.plot(results["raw_t"], results["raw_volt"].mean(axis=2))
+            plt.title("Avg shock current trace"); plt.xlabel('seconds')
+            plt.tight_layout()
+            plt.savefig(f'{plot_dir}/shock_trace.png')
+
+            f = plt.figure()
+            ax = f.add_subplot(211)
+            ax.plot(results["mean_volt"])
+            ax.plot(results["peak_volt"])
+            ax.set_ylim([0,6])
+            plt.legend(['mean_volt', 'peak_volt'])
+            plt.title("Shock voltage")
+            ax = f.add_subplot(212)
+            ax.plot(results["shock_dura"])
+            ax.set_ylim([0,0.1])
+            plt.title("Shock duration"); plt.ylabel('seconds');
+            plt.tight_layout()
+            plt.savefig(f'{plot_dir}/shock_info.png')            
+
+        print("warning: not tested on hdf5-style .mat files...")
+        for key, val in vr_mat.items():
+
+            if key in experiment_group:
+                del experiment_group[key]
+            # workaround for old matlab format
+            if key[:2] == '__':
+                continue
+            elif key in ['gStartShockInfo', 'gStopShockInfo']:
+                # use process_shock_times instead
+                pass
+            elif key == 'settings':
+                if not "settings" in list(experiment_group.keys()):
+                    settings_group = tyh5.create_group("/experiment/settings")
+                else:
+                    settings_group = tyh5["/experiment/settings"]
+
+                fields = val.dtype.names
+                for field in fields:
+                    v = val[0,0][field]
+                    if v.shape == (1,1):
+                        v = float(v)
+                    elif v.shape[0] == 1:
+                        v = v[0]
+                    settings_group.create_dataset(field, data=v)
+            elif key == 'stimuli':
+                # seems worthless for shock or OMR experiments...
+                # used for startle experiments it looks like
+                pass
+            else:
+                experiment_group.create_dataset(key, data=val)
+            
     except Exception as e:
         print(f"exception raised: {e}.\n Trying to close tyh5...")
         tyh5.close()

@@ -97,7 +97,6 @@ in
         # Add any other packages here, for instance:
         fd
         vim
-        vscode
         git
 
         /* opencv3 */

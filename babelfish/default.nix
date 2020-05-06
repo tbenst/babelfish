@@ -8,6 +8,7 @@
 , dill
 # , ffmpeg
 , future
+, hdf5plugin
 , h5py
 , joblib
 , matplotlib
@@ -21,7 +22,9 @@
 , pims
 , pytest
 , pytorch
+, pyarrow
 , pytorch-lightning
+, pynwb
 , requests
 , scipy
 , seaborn
@@ -51,6 +54,7 @@ buildPythonPackage rec {
     dill
     future
     h5py
+    hdf5plugin
     joblib
     matplotlib
     mlflow
@@ -62,6 +66,8 @@ buildPythonPackage rec {
     pims
     pytest
     pytorch
+    pyarrow
+    pynwb
     pytorch-lightning
     requests
     scipy

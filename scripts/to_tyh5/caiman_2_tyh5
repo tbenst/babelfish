@@ -1,0 +1,86 @@
+#!/usr/bin/env python
+__doc__ = '''
+For example:
+nix-shell --pure ~/code/babelfish/shell.nix --run 'caiman_2_tyh5 -s "." .'
+'''
+
+import tifffile, click, re, os
+from tqdm import tqdm
+import numpy as np
+from glob import glob
+from babelfish.helpers import compression_opts, glob_one_file
+import tables
+from pathlib import Path
+
+from typing import List
+
+import warnings
+# we name dset accorging to plane number
+warnings.filterwarnings("ignore", message="object name is not a valid Python identifier")
+
+    
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+@click.command(context_settings=CONTEXT_SETTINGS)
+@click.argument("experiment_directory", type=click.Path(exists=True),
+                required=False)
+@click.option("-s", "--subfolder", default="raw")
+@click.option("-p", "--postfix", default="_results_analysis.npz")
+@click.option("-c", "--compression-level", default=3, help="compression for zstd")
+def main(experiment_directory, subfolder, postfix,
+         compression_level):
+
+    """Convert CaImAn z-plane.npz to /caiman/plane-Z/*
+    """
+    if not experiment_directory:
+        # print help and exit
+        ctx = click.get_current_context()
+        click.echo(ctx.get_help())
+        exit(0)
+    # ensure absolute path
+    _, experiment_name = os.path.split(Path(os.getcwd()) / experiment_directory)
+    experiment_directory = experiment_directory + '/'
+    tyh5_path = glob_one_file(experiment_directory + "*.ty.h5")
+    
+    if type(tyh5_path)!=str:
+        tyh5_path = experiment_name + ".ty.h5"
+
+    assert type(tyh5_path)==str
+    
+        # load cnmf results
+    get_num = re.compile(f".*_Z(\d*){postfix}")
+    get_z = lambda x: int(get_num.search(x).group(1))
+    planes = glob(experiment_directory + f"*{postfix}")
+    planes = sorted(planes, key=lambda a: get_z(a))
+    print(f"found {len(planes)} z-planes from CaImAn")
+    assert len(planes) > 0
+    
+    with tables.open_file(tyh5_path, 'a') as tyh5:
+        print(f"opened {tyh5_path}")
+        if 'traces' in tyh5.root:
+            if 'cnmf_by_plane' in tyh5.root.traces:
+                if click.confirm(f'/traces/cnmf_by_plane already exists. Continue?'):
+                    click.echo('Deleting /traces/cnmf_by_plane/*')
+                    del tyh5.root.traces["cnmf_by_plane"]
+                else:
+                    click.echo('Quitting')
+                    exit(0)
+
+        dset_filter = tables.filters.Filters(complevel=compression_level,
+                                             complib='blosc:zstd')
+        
+        for file in tqdm(planes):
+            z = get_z(file)
+            cnmf_result = np.load(file)
+            plane_group = tyh5.create_group('/traces/cnmf_by_plane', str(z),
+                                          createparents=True)
+            for key, val in cnmf_result.items():
+                if key in ["d1", "d2"]:
+                    tyh5.root.traces.cnmf_by_plane._v_attrs[key] = val
+                else:
+                    dset = tyh5.create_carray(plane_group, key,
+                        tables.Atom.from_dtype(val.dtype), shape=val.shape,
+                        filters=dset_filter)
+                    dset[:] = val
+
+if __name__ == '__main__':
+    main()

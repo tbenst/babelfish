@@ -21,7 +21,8 @@ matplotlib.use('Agg')
 import tifffile, click, re, os
 from tqdm import tqdm
 import numpy as np
-from babelfish.helpers import resize_3d, resize_4d, compression_opts
+from babelfish.helpers import resize_3d, resize_4d, compression_opts, \
+    resize_from_tiff, read_tiff_path, assign_tiff_chan_to_dset, assign_stack_to_dset
 from scipy.ndimage.filters import minimum_filter1d
 import tables
 
@@ -31,51 +32,6 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 from typing import List
 # %%
-
-def resize_from_tiff(tiff):
-    tiff_shape = tiff.shape
-    if len(tiff_shape)==3:
-        _, H, W = tiff_shape
-        assert H == 512 # TODO support other sizes
-        assert W == 512 # TODO support other sizes
-        print("resize")
-        # TODO may run out of memory - should do one tiff .asarray() at a time
-        # memmap is too slow--streaming is better
-        newStack = resize_3d(tiff.asarray(), 0.5, 0.5)
-        newStack = newStack[:,None]
-    elif len(tiff_shape)==4:
-        _, _, H, W = tiff_shape
-        assert H == 512 # TODO support other sizes
-        assert W == 512 # TODO support other sizes
-        newStack = resize_4d(tiff.asarray(), 0.5, 0.5)    
-    return newStack
-
-def read_tiff_path(tiff_path):
-    tiff = tifffile.TiffFile(tiff_path)
-    assert len(tiff.series)==1 # we assume tiff.series[0] gets all data elsewhere
-    return tiff
-
-def assign_tiff_to_dset(dset, tiff, channel=0, batch_size=1024):
-    "dset is 5D TxCxZxHxW, tiff is either 3D TxHxW or 4D ZxTxHxW."
-    tiff_shape = tiff.series[0].shape
-    if len(tiff_shape)==3:
-        for b in tqdm(range(0,tiff_shape[0],batch_size)):
-            dset[b:b+batch_size,channel,0] = tiff.asarray(slice(b,b+batch_size))
-    elif len(tiff_shape)==4:
-        for z in tqdm(range(tiff_shape[0])):
-            nT = tiff_shape[1]
-            zIdx = slice(z*nT,(z+1)*nT)
-            dset[:,channel,z] = tiff.asarray(zIdx)
-            # ideally would use batching, but hard as tifffile does not support
-            # multidimensional indexing
-            # for b in tqdm(range(0,tiff_stack.shape[1],batch_size)):
-            #     new_stack = tiff_stack.asarray((z,slice(b,b+batch_size))).swapaxes(0,1)
-            #     dset[b:b+batch_size,channel,z] = new_stack
-    else:
-        raise(NotImplementedError("only supports 3 and 4 dim"))
-
-def assign_stack_to_dset(dset, tiff_stack, channel=0, batch_size=1024):
-    raise(NotImplementedError("only supports 3 and 4 dim"))
     
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.command(context_settings=CONTEXT_SETTINGS)
@@ -140,7 +96,7 @@ def tiff_channels_2_tyh5(tiff_paths: List, output_path: str, small: bool,
         dset_raw = tyh5.create_carray(imaging_g, 'raw',
             tables.Atom.from_dtype(tiff_dtype), shape=(T, C, Z, H, W),
             filters=dset_filter)
-        assign_tiff_to_dset(dset_raw, tiff, channel=0)
+        assign_tiff_chan_to_dset(dset_raw, tiff, channel=0)
         dset_raw.attrs['dimensions'] = "TCZHW"
         
         imaging_attrs = tyh5.root["imaging"]._v_attrs
@@ -177,7 +133,7 @@ def tiff_channels_2_tyh5(tiff_paths: List, output_path: str, small: bool,
 
         for i, tp in tqdm(enumerate(tiff_paths[1:],1)):
             tiff = read_tiff_path(tp)
-            assign_tiff_to_dset(dset_raw, tiff, channel=i)
+            assign_tiff_chan_to_dset(dset_raw, tiff, channel=i)
             if small:
                 stack = resize_from_tiff(tiff)
                 assign_stack_to_dset(dset_small, stack, channel=i)

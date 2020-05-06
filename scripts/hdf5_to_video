@@ -57,10 +57,11 @@ def hdf5_to_video(hdf5_file: str, dataset: str, quality: str, codec, pix_format,
     channel, colormap, subtract, vmin_percent, vmax_percent, gpu):
     """Convert HDF5_FILE["DATASET"] to [output_path], an .mp4 file.
     
-    Dataset must be 3D tensor or 4D tensor. For 4D tensor, must specify --max-z,
+    Dataset must be 3D tensor or 4D tensor or 5D tensor. For 4D tensor, must specify --max-z,
     or --z-plane.
     
     Example: ~/code/babelfish/scripts/hdf5_to_video f2_e1_FishVR.mat  "/gROI"
+    nix-shell --pure ~/code/babelfish/shell.nix --run "hdf5_to_video $name/$name.ty.h5 /imaging/raw --max-z
     """
     if hdf5_file is None or dataset is None:
         # print help and exit
@@ -77,7 +78,6 @@ def hdf5_to_video(hdf5_file: str, dataset: str, quality: str, codec, pix_format,
     # x265 at 110.8 it/s
     with tables.open_file(hdf5_file, 'r', swmr=True) as h5:
         imaging = h5.root[dataset]
-        print(f"found {imaging.shape[0]} frames")
         if max_z or z_plane:
             assert len(imaging.shape)==5
         else:
@@ -103,7 +103,6 @@ def hdf5_to_video(hdf5_file: str, dataset: str, quality: str, codec, pix_format,
             temp_array = imaging[0:500,channel,z_plane]
         else:
             temp_array = imaging[0:500,channel]
-                
         if subtract:
             min_frame = np.percentile(temp_array,subtract, axis=0)
             zero_frame = np.zeros_like(min_frame)
@@ -132,12 +131,14 @@ def hdf5_to_video(hdf5_file: str, dataset: str, quality: str, codec, pix_format,
                 break
             if max_z:
                 array_frame = array[channel].max(0)
-            elif z_plane:
+            elif not z_plane is None:
                 array_frame = array[channel,z_plane]
             else:
                 array_frame = array[channel]
+            
             if subtract:
                 array_frame = np.clip(0, array_frame.max(), array_frame)
+            
             if colormap:
                 array_frame = make_mpl_frame(array_frame, fig, ax, vmin, vmax)
                 # np_pix_format = "rgb24"

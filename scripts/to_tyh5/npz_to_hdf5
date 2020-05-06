@@ -1,0 +1,58 @@
+#!/usr/bin/env python
+__doc__ = '''
+For example:
+nix-shell --pure ~/code/babelfish/shell.nix --run "npz_to_hdf5 -g '/behavior' *segmented_movements.npz *.ty.h5 features tail_seg_params shock_et shock_st tailcam_et tailcam_st imcam_et imcam_st"
+'''
+
+import tifffile, click, re, os
+from tqdm import tqdm
+import numpy as np
+from babelfish.helpers import compression_opts
+import tables
+from pathlib import Path
+
+from typing import List
+
+    
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+@click.command(context_settings=CONTEXT_SETTINGS)
+@click.argument("npz_path", type=click.Path(exists=True),
+                required=False)
+@click.argument("h5_path", type=click.Path(),
+                required=False)
+@click.argument('skip_keys', nargs=-1,
+                required=False)
+@click.option("-g", "--group", default="/")
+@click.option("-c", "--compression-level", default=3, help="compression for zstd")
+def main(npz_path, h5_path, skip_keys, group,
+         compression_level):
+
+    """Create dataset in H5 GROUP for each key in NPZ, unless key in skip_keys
+    """
+    if not npz_path or not h5_path:
+        # print help and exit
+        ctx = click.get_current_context()
+        click.echo(ctx.get_help())
+        exit(0)
+    npz = np.load(npz_path)
+    with tables.open_file(h5_path, 'a') as h5:
+        print(f"opened {h5_path}")
+        parent, name = os.path.split(group)
+        if not group in h5:
+            h5_group = h5.create_group(parent, name, createparents=True)
+        else:
+            h5_group = h5.root[group]
+
+        dset_filter = tables.filters.Filters(complevel=compression_level, complib='blosc:zstd')
+
+        for key in npz.keys():
+            if key in skip_keys:
+                continue
+            elif key in h5_group:
+                h5.remove_node(f"{group}/{key}")
+            val = npz[key]
+            h5.create_carray(h5_group, key,
+                obj=val, filters=dset_filter)
+
+if __name__ == '__main__':
+    main()

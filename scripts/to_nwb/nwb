@@ -1,0 +1,359 @@
+#!/usr/bin/env python
+__doc__ = """Example: 
+nix-shell --pure ~/code/babelfish/shell.nix --run 'nwb new 2020-02-26_xlfm_proper_fr.nwb 2020-02-26 "Noah Young" "Stanford University" "Deisseroth Lab" add_tiff_T 2. raw/*.tif --indicator "HuC:H2B-GCaMP6S" --excitation 488. --emission=510. --device=XLFM --z-um 1.5 --x-um 1.121 --y-um 1.121'
+"""
+
+#%%
+import h5py, tables
+import hdf5plugin
+from hdf5plugin import Blosc
+import sys
+from functools import partial
+from typing import List
+
+import tifffile, fire, re, os, click
+from tqdm import tqdm
+import numpy as np
+from babelfish.helpers import resize_3d, resize_4d, compression_opts, \
+    resize_from_tiff, read_tiff_path, assign_tiff_Z_to_dset, \
+    assign_stack_to_dset, sort_by_integer, caiman_load_memmap
+
+
+from datetime import datetime
+from dateutil.tz import tzlocal
+from hdmf.backends.hdf5.h5_utils import H5DataIO
+from pynwb import NWBFile, TimeSeries, NWBHDF5IO
+from pynwb.ophys import TwoPhotonSeries, OpticalChannel, ImageSegmentation, Fluorescence
+from pynwb.device import Device
+from pynwb.image import ImageSeries
+# %%
+    
+class CLI(object):
+    """Facilitate writing a Neurodata without borders (NWB) file."""
+
+    def __init__(self):
+        self.io = None
+        self.nwbfile = None
+        self.filepath = ''
+
+    def __str__(self):
+        """Write data & close io."""
+        if not self.io is None:
+            if not self.nwbfile is None:
+                self.io.write(self.nwbfile)
+            self.io.close()
+        return f"Wrote to {self.filepath}"
+
+    def new(self, filepath:str, start_time: str, session_description:str,
+            session_identifier:str, experimenter:str=None,
+            institution:str=None, lab:str=None):
+        """Create a new NWB file.
+        
+        Args:
+            filepath: path for new NWB file (e.g. test.nwb)
+            start_time: ISO datetime (e.g. 2020-04-09T17:02:01.234)
+            experimenter: Name of experimenter (eg. Tyler Benster)
+            institution: Name of institution (eg. Stanford University)
+            lab: Name of lab (eg. Deisseroth Lab)
+
+        Returns:
+            self, with io as a NWBHDF5IO object, and nwbfile as a NWBFile.
+
+        """
+        try:
+            start_time = datetime.fromisoformat(start_time)
+        except ValueError:
+            print("Please specify a start time using ISO date format, e.g. " \
+                  f'"2020-04-09T17:02:01.234". Got {start_time}')
+            exit(1)
+        print(f"open {filepath}")
+        self.io = NWBHDF5IO(filepath, 'w')
+        print(f"create NWBFile")
+        self.nwbfile = NWBFile(session_description,
+                        session_identifier,
+                        start_time,
+                        experimenter=experimenter,
+                        institution=institution,
+                        lab=lab)
+        print(f"finish create NWBFile")
+        self.filepath = filepath
+        return self
+
+    def open(self, filepath):
+        """Open an existing NWB file.
+        
+        Args:
+            filepath: path for new NWB file (e.g. test.nwb)
+
+        Returns:
+            self, with io as a NWBHDF5IO object, and nwbfile as a NWBFile.
+
+        """
+        self.io = NWBHDF5IO(filepath, 'a')
+        self.nwbfile = io.read()
+        self.filepath = filepath
+        return self
+    
+    def add_caiman_mc(self,  frame_rate:float, *mmap_paths: List,
+            name:str="imaging", two_p:bool=False, compression_level=3,
+            indicator:str='', ochannel_desc:str='', plane_description:str='',
+            excitation:float=np.nan, emission:float=np.nan, device:str='',
+            x_um:float=np.nan, y_um:float=np.nan, z_um:float=np.nan
+            ):
+        """Add imaging dataset from per Z-plane CaImAn motion correction mmap.
+        
+        Args:
+            two_p (bool, optional): flag for if a Two Photon dataset
+            tiff_path: 1+ file paths of 3D (ZxWxH) /4D (CxZxWxH) tiffs
+            x_um: micron per pixel on x axis
+            y_um: micron per pixel on y axis
+            z_um: micron per pixel on z axis
+            
+        Benchmarks:
+            181s/iter zstd lvl 3 + order 'F
+            146s/iter zstd lvl 0 + order 'F
+            420s/iter zstd lvl 0 + order 'F ?????
+            151s/iter zstd lvl 0 + explicit array
+            150s/iter no compression + explicit array (151s)
+        """
+        Z = len(mmap_paths)
+        assert Z >= 1
+        print("opening first caiman plane")
+        images = caiman_load_memmap(mmap_paths[0])
+        print("loaded first caiman plane")
+        
+        T, H, W = images.shape
+        dtype = images.dtype
+
+        optical_channel = OpticalChannel(f"{emission} nm",
+                ochannel_desc, emission)
+        print("add series to nwb")
+        self.__add_series_to_nwb(name, frame_rate,
+            excitation_lambda=excitation, indicator=indicator,
+            imaging_plane_description=plane_description, dtype=dtype,
+            device=Device(device), optical_channel=optical_channel,
+            T=T, Z=Z, H=H, W=W, two_p=two_p,
+            grid_spacing=[z_um, y_um, x_um],
+            compression_level=compression_level
+            )
+        
+        data = self.nwbfile.get_acquisition(name).data
+        print("saving first plane")
+        data[:,0] = images
+
+        for z, tp in tqdm(enumerate(mmap_paths[1:],1),
+                            total=len(mmap_paths[1:])):
+            data[:,z] = caiman_load_memmap(mmap_paths[z])
+
+        return self
+
+    def add_tiff_Z(self,  frame_rate:float, tiff_path:str, *tiff_paths: List,
+            name:str="imaging", two_p:bool=False, compression_level=3,
+            indicator:str='', ochannel_desc:str='', plane_description:str='',
+            excitation:float=np.nan, emission:float=np.nan, device:str='',
+            x_um:float=np.nan, y_um:float=np.nan, z_um:float=np.nan
+            ):
+        """Add an imaging dataset from per Z-plane tiff files.
+        
+        Args:
+            two_p (bool, optional): flag for if a Two Photon dataset
+            tiff_path: 1+ file paths of 3D (ZxWxH) /4D (CxZxWxH) tiffs
+            x_um: micron per pixel on x axis
+            y_um: micron per pixel on y axis
+            z_um: micron per pixel on z axis
+        """
+        tiff_paths = [tiff_path] + list(tiff_paths)
+        tiff_paths = sort_by_integer(tiff_paths)
+        Z = len(tiff_paths)
+        tiff = read_tiff_path(tiff_paths[0])
+        tiff_shape = tiff.series[0].shape
+        tiff_dtype = tiff.pages[0].dtype
+        print("SHAPE", tiff_shape)
+        if len(tiff_shape)==3:
+            T, H, W = tiff_shape
+            C = 1
+        elif len(tiff_shape)==4:
+            raise(NotImplementedError("no support for 4D tiffs yet"))
+            # switch to T x C?
+            C, T, H, W = tiff_shape
+        else:
+            raise(NotImplementedError(f"bad tiff ndims of {len(tiff_shape)}"))
+
+        optical_channel = OpticalChannel(f"{emission} nm",
+                ochannel_desc, emission)
+        self.__add_series_to_nwb(name, frame_rate,
+            excitation_lambda=excitation, indicator=indicator,
+            imaging_plane_description=plane_description, dtype=tiff_dtype,
+            device=Device(device), optical_channel=optical_channel,
+            T=T, Z=Z, H=H, W=W, two_p=two_p,
+            grid_spacing=[z_um, y_um, x_um],
+            compression_level=compression_level
+            )
+        
+        data = self.nwbfile.get_acquisition(name).data
+        assign_tiff_Z_to_dset(data, tiff, Z=0, progress=True)
+
+        for i, tp in tqdm(enumerate(tiff_paths[1:],1),
+                            total=len(tiff_paths[1:])):
+            tiff = read_tiff_path(tp)
+            assign_tiff_Z_to_dset(data, tiff, Z=i)
+
+        return self
+
+    def add_tiff_T(self,  frame_rate:float, tiff_path:str, *tiff_paths: List,
+            name:str="imaging", two_p:bool=False, compression_level=3,
+            indicator:str='', ochannel_desc:str='', plane_description:str='',
+            excitation:float=np.nan, emission:float=np.nan, device:str='',
+            x_um:float=np.nan, y_um:float=np.nan, z_um:float=np.nan
+            ):
+        """Add an imaging dataset from per timestep tiff files.
+        
+        Args:
+            two_p (bool, optional): flag for if a Two Photon dataset
+            tiff_path: 1+ file paths of 3D (ZxWxH) /4D (CxZxWxH) tiffs
+            x_um: micron per pixel on x axis
+            y_um: micron per pixel on y axis
+            z_um: micron per pixel on z axis
+        """
+        tiff_paths = [tiff_path] + list(tiff_paths)
+        tiff_paths = sort_by_integer(tiff_paths)
+        T = len(tiff_paths)
+        tiff = read_tiff_path(tiff_paths[0])
+        tiff_shape = tiff.series[0].shape
+        tiff_dtype = tiff.pages[0].dtype
+        print("SHAPE", tiff_shape)
+        if len(tiff_shape)==3:
+            Z, H, W = tiff_shape
+            C = 1
+        elif len(tiff_shape)==4:
+            raise(NotImplementedError("no support for 4D tiffs yet"))
+            # switch to T x C?
+            C, T, H, W = tiff_shape
+        else:
+            raise(NotImplementedError(f"bad tiff ndims of {len(tiff_shape)}"))
+        print("TCZHW", T, C, Z, H, W)
+        optical_channel = OpticalChannel(f"{emission} nm",
+                ochannel_desc, emission)
+        self.__add_series_to_nwb(name, frame_rate,
+            excitation_lambda=excitation, indicator=indicator,
+            imaging_plane_description=plane_description, dtype=tiff_dtype,
+            device=Device(device), optical_channel=optical_channel,
+            T=T, Z=Z, H=H, W=W, two_p=two_p,
+            grid_spacing=[z_um, y_um, x_um],
+            compression_level=compression_level
+            )
+        
+        with tables.open_file(self.filepath, "a") as h5:
+            data = h5.root[f"/acquisition/{name}/data"]
+
+        # data = self.nwbfile.get_acquisition(name).data
+            data[0] = tiff.asarray()
+
+            for i, tp in tqdm(enumerate(tiff_paths[1:],1),
+                                total=len(tiff_paths[1:])):
+                tiff = read_tiff_path(tp)
+                data[i] = tiff.asarray()
+
+        return self
+    
+    def add_tiff(self,  frame_rate:float, tiff_path:str,
+            name:str="imaging", two_p:bool=False, compression_level=3,
+            indicator:str='', ochannel_desc:str='', plane_description:str='',
+            excitation:float=np.nan, emission:float=np.nan, device:str='',
+            x_um:float=np.nan, y_um:float=np.nan, z_um:float=np.nan
+            ):
+        """Add an imaging dataset from single (ZxTxHxW) big-TIFF file.
+        
+        Args:
+            two_p (bool, optional): flag for if a Two Photon dataset
+            tiff_path: file path of (TxZxWxH), typically a .btf file
+            x_um: micron per pixel on x axis
+            y_um: micron per pixel on y axis
+            z_um: micron per pixel on z axis
+        """
+        raise(NotImplementedError("TODO"))
+        tiffFile = read_tiff_path(tiff_path)
+        tiff = tiffFile.series[0]
+        try:
+            assert len(tiff.shape)==4
+        except AssertionError as e:
+            print("for 3D tiffs, try add_tiff_T or add_tiff_Z")
+            raise(e)
+        
+        Z, T, H, W = tiff.shape
+
+        tiff_dtype = tiffFile.pages[0].dtype
+
+        print("TZHW", T, Z, H, W)
+        
+        optical_channel = OpticalChannel(f"{emission} nm",
+                ochannel_desc, emission)
+        self.__add_series_to_nwb(name, frame_rate,
+            excitation_lambda=excitation, indicator=indicator,
+            imaging_plane_description=plane_description, dtype=tiff_dtype,
+            device=Device(device), optical_channel=optical_channel,
+            T=T, Z=Z, H=H, W=W, two_p=two_p,
+            grid_spacing=[z_um, y_um, x_um],
+            compression_level=compression_level
+            )
+        
+        with tables.open_file(self.filepath, "a") as h5:
+            data = h5.root[f"/acquisition/{name}/data"]
+            for z in tqdm(range(Z)):
+                zIdx = slice(z*T,(z+1)*T)
+                dset[:,channel,z] = tiff.asarray(zIdx)
+
+
+        return self
+    
+    def __add_series_to_nwb(self, name: str, imaging_rate: float,
+              two_p: bool, grid_spacing,
+              T:int, Z:int, H:int, W:int, dtype, excitation_lambda=920.,
+              indicator='HuC:H2B-GCaMP6S',
+              imaging_plane_description="",
+              device = Device("Olympus 2P"),
+              optical_channel = OpticalChannel('green',
+                'old PMT, wavelength is approximate.', 510.),
+              compression_level=3
+              ):
+        """
+        Add an (empty) Image or 2P timeseries to nwbfile & write to disk.
+        """
+        self.nwbfile.add_device(device)
+        
+        imaging_plane = self.nwbfile.create_imaging_plane('zebrafish_brain', optical_channel,
+            description='', device=device, excitation_lambda=excitation_lambda,
+            imaging_rate=np.nan, indicator=indicator, location='',
+            grid_spacing=grid_spacing, grid_spacing_unit='microns')
+        if compression_level:
+            compress_opts = Blosc('zstd', compression_level)
+        else:
+            compress_opts = {}
+        data = H5DataIO(data=np.empty(shape=(0, Z, H, W), dtype=dtype),
+                        maxshape=(None, Z, H, W), # allow resizing
+                        chunks=(1, 1, H, W),
+                        fillvalue=np.nan,
+                        allow_plugin_filters=True,
+                        **compress_opts
+                        # **Blosc('zstd', compression_level)
+                        )
+        if two_p:
+            image_series = TwoPhotonSeries(name=name, data=data,
+                rate=imaging_rate, imaging_plane=imaging_plane)
+        else:
+            image_series = ImageSeries(name=name, data=data,
+                rate=imaging_rate)
+        
+        self.nwbfile.add_acquisition(image_series)
+        self.io.write(self.nwbfile)
+        
+        # NWB can't resize larger than memory...
+        self.io.close()
+        with h5py.File(self.filepath, "a") as h5:
+            h5[f"/acquisition/{name}/data"].resize((T, Z, H, W))
+        self.io = NWBHDF5IO(self.filepath, 'a')
+        self.nwbfile = self.io.read()
+
+
+if __name__ == '__main__':
+    fire.Fire(CLI)

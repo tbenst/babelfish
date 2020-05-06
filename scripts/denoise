@@ -1,0 +1,78 @@
+#!/usr/bin/env python
+
+import click, h5py, os, datetime, mlflow, itertools, torch, gc, dill, cv2, sys
+import requests, tifffile, tables
+import babelfish
+import babelfish as bf, torch as T, numpy as np
+import mlflow
+from mlflow.tracking import MlflowClient
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+import babelfish_models
+import babelfish_models.models
+import babelfish_models.volume
+import babelfish_models.resnet
+import babelfish_models.super_res
+import babelfish_models.misc
+
+
+@click.command()
+@click.argument("run_id", type=str)
+@click.argument("epoch", type=int)
+@click.option("--device_id", type=str)
+@click.option("--seed", type=str, default=24)
+@click.option("-c", "--compression-level", default=3, help="compression for zstd")
+@click.option("-o", "--out-dataset", type=str, required=False,
+    default="/imaging/denoised_small_padded")
+@click.option("--batch-size", type=int, default=64)
+@click.option("--num-workers", type=int, default=12)
+@click.option("--experiment-name", type=str, default="babelfish")
+def main(run_id, epoch, device_id, seed, batch_size,
+         compression_level: int, num_workers, out_dataset, experiment_name):
+    """Use ML model to produce denoised dataset.
+    """
+    mlflow.set_experiment(experiment_name)
+    T.manual_seed(seed)
+    np.random.seed(seed)
+    run =  MlflowClient().get_run(run_id)
+    model_path = f"/models/epoch/{epoch}"
+    model = bf.helpers.load_model_from_run_info(run.info,
+        model_path=model_path)
+    params = run.data.params
+    metrics = run.data.metrics
+    tyh5_path = params["tyh5_path"]
+    prev_frames = int(params["prev_frames"])
+    next_frames = int(params["next_frames"])
+    with tables.open_file(tyh5_path, 'a') as tyh5:
+        if out_dataset in tyh5:
+            click.confirm(f'Do you want to overwrite {out_dataset}?',
+                abort=True)
+            tyh5.remove_node(out_dataset)
+        
+        imaging = tyh5.root[params["dataset"]]
+        
+        all_data = bf.data.ZebraFishData(imaging,
+                        prev_frames=prev_frames,next_frames=next_frames)
+        dataloader = DataLoader(all_data, batch_size=batch_size,
+                                shuffle=False, num_workers=num_workers)
+        
+        dset_filter = tables.filters.Filters(complevel=compression_level,
+            complib='blosc:zstd')
+        group, dset_name = os.path.split(out_dataset)
+        dtype = imaging.dtype
+        dset = tyh5.create_carray(group, dset_name,
+            tables.Atom.from_dtype(dtype), shape=imaging.shape,
+            filters=dset_filter)
+        
+        with T.no_grad():
+            for b,batch_data in tqdm(enumerate(dataloader), total=len(dataloader)):
+                X, Y = batch_data
+                y = model(X["brain"].cuda())
+                denoised_batch = y['pred']
+                start_idx = b*batch_size
+                end_idx = start_idx+denoised_batch.shape[0]
+                dset[start_idx:end_idx] = denoised_batch.cpu().numpy()
+                
+
+if __name__ == '__main__':
+    main()

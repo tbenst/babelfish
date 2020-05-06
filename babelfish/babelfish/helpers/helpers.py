@@ -1,13 +1,13 @@
 from __future__ import print_function, division
 import torch as T
-import torch
+import torch, pathlib
 import torch.nn.functional as F
 import torch.nn as nn
 from torchvision.utils import save_image
 from torch.utils.data import DataLoader, Dataset
 import scipy.linalg
 from functools import partial
-import matplotlib as mpl
+import matplotlib as mpl, re
 import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.gridspec as gridspec
@@ -15,16 +15,13 @@ import scipy.sparse as sparse
 from scipy import stats
 import gc
 from tqdm import tqdm
-import pandas as pd
-import seaborn as sb
+import pandas as pd, seaborn as sb, dill, cv2, resource, tifffile
 from pandas import DataFrame
 from scipy.spatial import distance
 from scipy.cluster import hierarchy
 from torchvision.transforms import Resize
-import dill
 from joblib import Parallel, delayed
-import cv2
-import resource
+from typing import List, Tuple, Any
 
 import os, sys, datetime
 import itertools
@@ -329,3 +326,119 @@ def chunk_size_for_memory_quota(ndarray:np.ndarray, mem_quota:float=16.0):
     size_per_sample = np.product(ndarray.shape[1:]) * ndarray.dtype.itemsize # bytes
     chunk_size = int(max_memory/size_per_sample)
     return chunk_size
+
+def resize_from_tiff(tiff):
+    tiff_shape = tiff.shape
+    if len(tiff_shape)==3:
+        _, H, W = tiff_shape
+        assert H == 512 # TODO support other sizes
+        assert W == 512 # TODO support other sizes
+        print("resize")
+        # TODO may run out of memory - should do one tiff .asarray() at a time
+        # memmap is too slow--streaming is better
+        newStack = resize_3d(tiff.asarray(), 0.5, 0.5)
+        newStack = newStack[:,None]
+    elif len(tiff_shape)==4:
+        _, _, H, W = tiff_shape
+        assert H == 512 # TODO support other sizes
+        assert W == 512 # TODO support other sizes
+        newStack = resize_4d(tiff.asarray(), 0.5, 0.5)    
+    return newStack
+
+def read_tiff_path(tiff_path):
+    tiff = tifffile.TiffFile(tiff_path)
+    assert len(tiff.series)==1 # we assume tiff.series[0] gets all data elsewhere
+    return tiff
+
+def assign_tiff_chan_to_dset(dset, tiff, channel=0, batch_size=1024):
+    "dset is 5D TxCxZxHxW, tiff is either 3D TxHxW or 4D ZxTxHxW."
+    tiff_shape = tiff.series[0].shape
+    if len(tiff_shape)==3:
+        for b in tqdm(range(0,tiff_shape[0],batch_size)):
+            dset[b:b+batch_size,channel,0] = tiff.asarray(slice(b,b+batch_size))
+    elif len(tiff_shape)==4:
+        for z in tqdm(range(tiff_shape[0])):
+            nT = tiff_shape[1]
+            zIdx = slice(z*nT,(z+1)*nT)
+            dset[:,channel,z] = tiff.asarray(zIdx)
+            # ideally would use batching, but hard as tifffile does not support
+            # multidimensional indexing
+            # for b in tqdm(range(0,tiff_stack.shape[1],batch_size)):
+            #     new_stack = tiff_stack.asarray((z,slice(b,b+batch_size))).swapaxes(0,1)
+            #     dset[b:b+batch_size,channel,z] = new_stack
+    else:
+        raise(NotImplementedError("only supports 3 and 4 dim"))
+
+def assign_tiff_Z_to_dset(dset, tiff, Z=0, batch_size=1024, progress=False):
+    "dset is 4D TxZxHxW, tiff is a 3D TxHxW."
+    tiff_shape = tiff.series[0].shape
+    if progress:
+        gen = tqdm(range(0,tiff_shape[0],batch_size),
+                    total = int(tiff_shape[0]/batch_size))
+    else:
+        gen = range(0,tiff_shape[0],batch_size)
+    
+    if len(tiff_shape)==3:
+        for b in gen:
+            dset[b:b+batch_size,Z] = tiff.asarray(slice(b,b+batch_size))
+    else:
+        raise(NotImplementedError("only supports 3 dim"))
+
+def assign_stack_to_dset(dset, tiff_stack, channel=0, batch_size=1024):
+    raise(NotImplementedError("only supports 3 and 4 dim"))
+
+
+def sort_by_z_plane(strings: List[str], postfix: str='.*'):
+    get_num = re.compile(f".*_Z(\d+){postfix}")
+    get_z = lambda x: int(get_num.search(x).group(1))
+    return sorted(strings, key=lambda a: get_z(a))
+
+def sort_by_integer(strings: List[str], prefix=".*", postfix: str='.*'):
+    get_num = re.compile(f"{prefix}(\d+){postfix}")
+    get_int = lambda x: int(get_num.search(x).group(1))
+    return sorted(strings, key=lambda a: get_int(a))
+
+
+def prepare_shape(mytuple: Tuple) -> Tuple:
+    """ This promotes the elements inside a shape into np.uint64. It is intended to prevent overflows
+        with some numpy operations that are sensitive to it, e.g. np.memmap
+        
+        from CaImAn."""
+    if not isinstance(mytuple, tuple):
+        raise Exception("Internal error: prepare_shape() passed a non-tuple")
+    return tuple(map(lambda x: np.uint64(x), mytuple))
+
+
+def caiman_load_memmap(filename: str, mode: str = 'r') -> Tuple[Any, Tuple, int]:
+    """ Load a memory mapped file created by CaImAn's save_memmap
+    Args:
+        filename: str
+            path of the file to be loaded
+        mode: str
+            One of 'r', 'r+', 'w+'. How to interact with files
+    Returns:
+        Yr:
+            memory mapped variable
+        dims: tuple
+            frame dimensions
+        T: int
+            number of frames
+    Raises:
+        ValueError "Unknown file extension"
+    """
+    if pathlib.Path(filename).suffix != '.mmap':
+        raise ValueError('Unknown file extension (should be .mmap)')
+    # Strip path components and use CAIMAN_DATA/example_movies
+    # TODO: Eventually get the code to save these in a different dir
+    file_to_load = filename
+    filename = os.path.split(filename)[-1]
+    fpart = filename.split('_')[1:-1]  # The filename encodes the structure of the map
+    d1, d2, d3, T, order = int(fpart[-9]), int(fpart[-7]), int(fpart[-5]), int(fpart[-1]), fpart[-3]
+    Yr = np.memmap(file_to_load, mode=mode, shape=prepare_shape((d1 * d2 * d3, T)), dtype=np.float32, order=order)
+    if d3 == 1:
+        dims =  (d1, d2)
+    else:
+        dims = (d1, d2, d3)
+        
+    return np.reshape(Yr.T, [T] + list(dims), order='F')
+    # return np.array(np.reshape(Yr.T, [T] + list(dims), order='F'))
