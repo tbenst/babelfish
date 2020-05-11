@@ -2,25 +2,19 @@
 
 """
 This script follows closely the demo_pipeline.py script but uses the
-Neurodata Without Borders (NWB) file format for loading the input and saving
+Tiffs for loading the input and NWB for saving
 the output. It is meant as an example on how to use NWB files with CaImAn.
 authors: @agiovann and @epnev
 """
-
-import logging
-# logging.basicConfig()
-logging.basicConfig(format=
-                    "%(relativeCreated)12d [%(filename)s:%(funcName)20s():%(lineno)s]"\
-                    "[%(process)d] %(message)s",
-                    level=logging.DEBUG)
-logging.getLogger().setLevel(logging.DEBUG)
-
+# raise(NotImplementedError("not finished / tested"))
+import os
+os.environ["CAIMAN_DATA"] = "/Computer/shell/poetry-caiman/CaImAn"
 import cv2
 import glob
 import logging
 import matplotlib.pyplot as plt
 import numpy as np
-import os, fire
+import fire
 
 try:
     cv2.setNumThreads(0)
@@ -36,45 +30,23 @@ from caiman.source_extraction.cnmf import cnmf as cnmf
 from caiman.source_extraction.cnmf import params as params
 from caiman.utils.utils import download_demo
 from caiman.paths import caiman_datadir
-
+from caiman.summary_images import local_correlations_movie_offline
+import hdf5plugin
 from pynwb import NWBHDF5IO
 
-# %%
+#
 # Set up the logger (optional); change this if you like.
 # You can log to a file using the filename parameter, or make the output more
 # or less verbose by setting level to logging.DEBUG, logging.INFO,
 # logging.WARNING, or logging.ERROR
 
+logging.basicConfig(format=
+                    "%(relativeCreated)12d [%(filename)s:%(funcName)20s():%(lineno)s]"\
+                    "[%(process)d] %(message)s",
+                    level=logging.WARNING)
 
-
-#%%
-def main(nwb_filepath, frame_rate=None, data_name="imaging",
-         decay_time=2., motion_correct:bool=False, n_processes=16):
-    """Run motion processing & extract neuron traces with CaImAn.
-    
-    Args:
-        nwb_filepath: Neurodata Without Borders filepath (.nwb)
-        frame_rate: override NWB frame_rate
-        dataset: dataset name (resolves to "/acquisition/${dataset}/data")
-        decay_time: length of a typical transient in seconds
-        motion_correct (bool, optional): flag to motion correct data
-
-    """
-
-#%% Select file(s) to be processed (download if not present)
-    fnames = [ nwb_filepath]
-    # estimates save path can be same or different from raw data path
-    save_path = nwb_filepath
-    # dataset dependent parameters
-    if frame_rate is None:
-        with NWBHDF5IO(nwb_filepath, 'r') as io:
-            nwbfile = io.read()
-            fr = nwbfile.acquisition[data_name].rate
-    else:
-        fr = frame_rate
-
-    # motion correction parameters
-    # TODO: read from nwb
+#
+def create_mc_dict(fnames, dset, fr, decay_time, is3D=False):
     dxy = (1., 1.)  # spatial resolution in x, y, and z in (um per pixel)
     # note the lower than usual spatial resolution here
     max_shift_um = (10., 10.)  # maximum shift in um
@@ -89,82 +61,86 @@ def main(nwb_filepath, frame_rate=None, data_name="imaging",
     # maximum deviation allowed for patch with respect to rigid shifts
     max_deviation_rigid = 3
 
+    
     mc_dict = {
         'fnames': fnames,
         'fr': fr,
         'decay_time': decay_time,
         'dxy': dxy,
         'pw_rigid': pw_rigid,
-        'niter_rig': 1,
         'max_shifts': max_shifts,
         'strides': strides,
         'overlaps': overlaps,
         'max_deviation_rigid': max_deviation_rigid,
         'border_nan': 'copy',
-        'var_name_hdf5': data_name,
-        'is3D': True,
-        'splits_els': 20,
-        'splits_rig': 20,
-        'num_frames_split': 30
+        'var_name_hdf5': dset
     }
+    
+    if is3D:
+        mc_dict = {**mc_dict,
+            'niter_rig': 1,
+            'is3D': True,
+            # maybe remove next three...
+            'splits_els': 20,
+            'splits_rig': 20,
+            'num_frames_split': 30
+        }
 
-    opts = params.CNMFParams(params_dict=mc_dict)
+    return params.CNMFParams(params_dict=mc_dict)
 
-    if motion_correct:
-#%% First setup some parameters for data and motion correction
+def main(tiff_filepath, frame_rate=None, data_name="imaging",
+         time_decay=2., motion_correct=False, is3D=False,
+         n_processes=16):
+    """Run motion processing & extract neuron traces with CaImAn.
+    
+    May god help you using NWB with CaImAn. Might work if using motion correction.
+    
+    Args:
+        tiff_filepath: tiff
+        frame_rate: override NWB frame_rate
+        data_name: dataset name (resolves to "/acquisition/${dataset}/data")
+        time_decay: length of a typical transient in seconds
+        motion_correct (bool, optional): flag to motion correct data
 
+    """
 
-
-
-    # %% start a cluster for parallel processing
-        c, dview, n_processes = cm.cluster.setup_cluster(
-            backend='local', n_processes=None, single_thread=False)
-
-    # %%% MOTION CORRECTION
-        # first we create a motion correction object with the specified parameters
-        mc = MotionCorrect(fnames, dview=dview, var_name_hdf5=opts.data['var_name_hdf5'], **opts.get_group('motion'))
-        # note that the file is not loaded in memory
-
-    # %% Run (piecewise-rigid motion) correction using NoRMCorre
-        mc.motion_correct(save_movie=True)
-
-    # %% MEMORY MAPPING
-        border_to_0 = 0 if mc.border_nan is 'copy' else mc.border_to_0
-        # you can include the boundaries of the FOV if you used the 'copy' option
-        # during motion correction, although be careful about the components near
-        # the boundaries
-
-        # memory map the file in order 'C'
-        fname_new = cm.save_memmap(mc.mmap_file, base_name='memmap_', order='C',
-                                border_to_0=border_to_0)  # exclude borders
-
-        # now load the file
-        Yr, dims, T = cm.load_memmap(fname_new)
-        images = np.reshape(Yr.T, [T] + list(dims), order='F')
-        # load frames in python format (T x X x Y)
-
-    # %% restart cluster to clean up memory
-        cm.stop_server(dview=dview)
-        c, dview, n_processes = cm.cluster.setup_cluster(
-            backend='local', n_processes=None, single_thread=False)
+    fnames = [ tiff_filepath]
+    # estimates save path can be same or different from raw data path
+    nwb_filepath, _ = os.path.splitext(tiff_filepath)
+    nwb_filepath += ".nwb"
+    save_path = nwb_filepath
+    # dataset dependent parameters
+    if frame_rate is None:
+        if os.path.exists(nwb_filepath):
+            with NWBHDF5IO(nwb_filepath, 'r') as io:
+                nwbfile = io.read()
+                fr = nwbfile.acquisition[data_name].rate
+        else:
+            print(f"please specify frame rate as {nwb_filepath} does not exist.")
+            exit(0)
     else:
-        io = NWBHDF5IO(nwb_filepath, 'r')
-        nwbfile = io.read()
-        images = nwbfile.acquisition["imaging"].data
-        
-        c, dview, n_processes = cm.cluster.setup_cluster(
-            backend='local', n_processes=None, single_thread=False)
+        fr = frame_rate
 
+    # motion correction parameters
+    dset = f'acquisition/{data_name}'
+    opts = create_mc_dict(fnames, dset, fr, time_decay,  is3D)
 
-# %%  parameters for source extraction and deconvolution
+    c, dview, _ = cm.cluster.setup_cluster(
+        backend='local', n_processes=n_processes, single_thread=False)
+
+    #  parameters for source extraction and deconvolution
     p = 1                    # order of the autoregressive system
     gnb = 2                  # number of global background components
     merge_thr = 0.85         # merging threshold, max correlation allowed
-    rf = 15 # half-size of the patches in pixels. e.g., if rf=25, patches are 50x50
+    rf = 15
+    # half-size of the patches in pixels. e.g., if rf=25, patches are 50x50
     stride_cnmf = 6          # amount of overlap between the patches in pixels
-    K = 12                    # number of components per patch
+    K = 6                    # number of components per patch (4-12?)
     # TODO set based on micron / add flag?
-    gSig = [2, 2, 2]            # expected half size of neurons in pixels
+    if is3D:
+        gSig = [2,2,2]
+    else:
+        gSig = [3, 3]            # expected half size of neurons in pixels
     # initialization method (if analyzing dendritic data using 'sparse_nmf')
     method_init = 'greedy_roi'
     ssub = 1                     # spatial subsampling during initialization
@@ -185,30 +161,33 @@ def main(nwb_filepath, frame_rate=None, data_name="imaging",
         'rolling_sum': True,
         'ssub': ssub,
         'stride': stride_cnmf,
-        'tsub': tsub,
-        # 'memory_fact': 0.1,
-        # "n_pixels_per_process": 1000,
-        # "num_blocks_per_run_spat": 5,
-        # "num_blocks_per_run_temp": 5, 
-        "block_size_spat": 100,
-        "block_size_temp": 100
-        # "block_size":
+        'tsub': tsub
     }
         
     opts.change_params(params_dict=opts_dict);
-# %% RUN CNMF ON PATCHES
+# RUN CNMF ON PATCHES
     # First extract spatial and temporal components on patches and combine them
     # for this step deconvolution is turned off (p=0)
 
     opts.change_params({'p': 0})
     cnm = cnmf.CNMF(n_processes, params=opts, dview=dview)
-    cnm = cnm.fit(images)
+    cnm = cnm.fit_file(motion_correct=motion_correct)
+    
+    Cns = local_correlations_movie_offline(fnames[0],
+                                           remove_baseline=True,
+                                           swap_dim=False, window=1000, stride=1000,
+                                           winSize_baseline=100, quantil_min_baseline=10,
+                                           dview=dview)
+    Cn = Cns.max(axis=0)
 
+    # load memory mapped file
+    Yr, dims, T = cm.load_memmap(cnm.mmap_file)
+    images = np.reshape(Yr.T, [T] + list(dims), order='F')
 
-# %% RE-RUN seeded CNMF on accepted patches to refine and perform deconvolution
+# RE-RUN seeded CNMF on accepted patches to refine and perform deconvolution
     cnm.params.change_params({'p': p})
     cnm2 = cnm.refit(images, dview=dview)
-    # %% COMPONENT EVALUATION
+    # COMPONENT EVALUATION
     # the components are evaluated in three ways:
     #   a) the shape of each component must be correlated with the data
     #   b) a minimum peak SNR is required over the length of a transient
@@ -218,30 +197,33 @@ def main(nwb_filepath, frame_rate=None, data_name="imaging",
     cnn_thr = 0.99  # threshold for CNN based classifier
     cnn_lowest = 0.1 # neurons with cnn probability lower than this value are rejected
 
-    cnm2.params.set('quality', {'decay_time': decay_time,
+    cnm2.params.set('quality', {'decay_time': time_decay,
                                'min_SNR': min_SNR,
                                'rval_thr': rval_thr,
                                'use_cnn': True,
                                'min_cnn_thr': cnn_thr,
                                'cnn_lowest': cnn_lowest});
+    # no CNN found...
     cnm2.estimates.evaluate_components(images, cnm2.params, dview=dview)
-    #%%
+    #
     cnm2.estimates.Cn = Cn
-    cnm2.save(fname_new[:-4] + 'hdf5')
-    # %% PLOT COMPONENTS
+    cnm2.save(cnm2.mmap_file[:-4]+'hdf5')
+    # cnm2.save(fname_new[:-4] + 'hdf5')
+    # PLOT COMPONENTS
+    # must do or else saving NWB will fail...
     cnm2.estimates.plot_contours(img=Cn, idx=cnm2.estimates.idx_components)
 
-    #%% update object with selected components
+    # update object with selected components (try uncommenting...)
     # cnm2.estimates.select_components(use_object=True)
-    #%% Extract DF/F values
+    
+    # Extract DF/F values
+    # cnm2.estimates.detrend_df_f(quantileMin=8, frames_window=250)
 
-    cnm2.estimates.detrend_df_f(quantileMin=8, frames_window=250)
-
-    #%% Show final traces
-    cnm2.estimates.view_components(img=Cn)
+    # Show final traces
+    # cnm2.estimates.view_components(img=Cn)
 
 
-    #%% STOP CLUSTER and clean up log files
+    # STOP CLUSTER and clean up log files
 
     cm.stop_server(dview=dview)
     log_files = glob.glob('*_LOG_*')
@@ -254,11 +236,11 @@ def main(nwb_filepath, frame_rate=None, data_name="imaging",
     except:
         pass
         
-    #%% save the results in the original NWB file
+    # save the results in the original NWB file
     cnm2.estimates.save_NWB(save_path, imaging_rate=fr, session_start_time=datetime.now(tzlocal()),
                             raw_data_file=fnames[0])
 
-# %%
+#
 # This is to mask the differences between running this demo in Spyder
 # versus from the CLI
 if __name__ == "__main__":

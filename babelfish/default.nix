@@ -1,12 +1,14 @@
 # this file defines the Nix package
 { lib, buildPythonPackage
+, altair
 , babelfish-models
 , bokeh
 , boto3
 , cython
 , click
 , dill
-# , ffmpeg
+, ffmpeg
+, fire
 , future
 , hdf5plugin
 , h5py
@@ -43,15 +45,17 @@ buildPythonPackage rec {
     python -m unittest discover
   '';
 
-  # nativeBuildInputs = [ ffmpeg ];
+  nativeBuildInputs = [ ffmpeg ];
 
   propagatedBuildInputs = [
+    altair
     babelfish-models
     bokeh
     boto3
     cython
     click
     dill
+    fire
     future
     h5py
     hdf5plugin

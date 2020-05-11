@@ -27,7 +27,7 @@ from pynwb.device import Device
 from pynwb.image import ImageSeries
 # %%
     
-class CLI(object):
+class NWB(object):
     """Facilitate writing a Neurodata without borders (NWB) file."""
 
     def __init__(self):
@@ -35,6 +35,13 @@ class CLI(object):
         self.nwbfile = None
         self.filepath = ''
 
+    def __str__(self):
+        """Write data & close io."""
+        if not self.io is None:
+            if not self.nwbfile is None:
+                self.io.write(self.nwbfile)
+            self.io.close()
+        return f"Wrote to {self.filepath}"
 
     def new(self, filepath:str, start_time: str, session_description:str,
             session_identifier:str, experimenter:str=None,
@@ -58,16 +65,16 @@ class CLI(object):
             print("Please specify a start time using ISO date format, e.g. " \
                   f'"2020-04-09T17:02:01.234". Got {start_time}')
             exit(1)
-        print(f"open {filepath}")
+        # print(f"open {filepath}")
         self.io = NWBHDF5IO(filepath, 'w')
-        print(f"create NWBFile")
+        # print(f"create NWBFile")
         self.nwbfile = NWBFile(session_description,
                         session_identifier,
                         start_time,
                         experimenter=experimenter,
                         institution=institution,
                         lab=lab)
-        print(f"finish create NWBFile")
+        # print(f"finish create NWBFile")
         self.filepath = filepath
         return self
 
@@ -86,10 +93,20 @@ class CLI(object):
         self.filepath = filepath
         return self
     
+    def close(self):
+        """Write data & close io."""
+        if not self.io is None:
+            if not self.nwbfile is None:
+                self.io.write(self.nwbfile)
+            self.io.close()
+    
+    def __del__(self):
+        self.close()
+    
     def add_caiman_mc(self,  frame_rate:float, *mmap_paths: List,
             name:str="imaging", two_p:bool=False, compression_level=3,
             indicator:str='', ochannel_desc:str='', plane_description:str='',
-            excitation:float=np.nan, emission:float=np.nan, device:str='unknown-device',
+            excitation:float=np.nan, emission:float=np.nan, device:str='',
             x_um:float=np.nan, y_um:float=np.nan, z_um:float=np.nan
             ):
         """Add imaging dataset from per Z-plane CaImAn motion correction mmap.
@@ -142,7 +159,7 @@ class CLI(object):
     def add_tiff_Z(self,  frame_rate:float, tiff_path:str, *tiff_paths: List,
             name:str="imaging", two_p:bool=False, compression_level=3,
             indicator:str='', ochannel_desc:str='', plane_description:str='',
-            excitation:float=np.nan, emission:float=np.nan, device:str='unknown-device',
+            excitation:float=np.nan, emission:float=np.nan, device:str='',
             x_um:float=np.nan, y_um:float=np.nan, z_um:float=np.nan
             ):
         """Add an imaging dataset from per Z-plane tiff files.
@@ -195,7 +212,7 @@ class CLI(object):
     def add_tiff_T(self,  frame_rate:float, tiff_path:str, *tiff_paths: List,
             name:str="imaging", two_p:bool=False, compression_level=3,
             indicator:str='', ochannel_desc:str='', plane_description:str='',
-            excitation:float=np.nan, emission:float=np.nan, device:str='unknown-device',
+            excitation:float=np.nan, emission:float=np.nan, device:str='',
             x_um:float=np.nan, y_um:float=np.nan, z_um:float=np.nan
             ):
         """Add an imaging dataset from per timestep tiff files.
@@ -251,7 +268,7 @@ class CLI(object):
     def add_tiff(self,  frame_rate:float, tiff_path:str,
             name:str="imaging", two_p:bool=False, compression_level=3,
             indicator:str='', ochannel_desc:str='', plane_description:str='',
-            excitation:float=np.nan, emission:float=np.nan, device:str='unknown-device',
+            excitation:float=np.nan, emission:float=np.nan, device:str='',
             x_um:float=np.nan, y_um:float=np.nan, z_um:float=np.nan,
             channel:int=None
             ):
@@ -297,15 +314,15 @@ class CLI(object):
                 zIdx = slice(z*T,(z+1)*T)
                 dset[:,channel,z] = tiff.asarray(zIdx)
 
+
         return self
 
     def add_array(self,  frame_rate:float, array,
             name:str="imaging", two_p:bool=False, compression_level=3,
             indicator:str='', ochannel_desc:str='', plane_description:str='',
-            excitation:float=np.nan, emission:float=np.nan, device:str='unknown-device',
+            excitation:float=np.nan, emission:float=np.nan, device:str='',
             x_um:float=np.nan, y_um:float=np.nan, z_um:float=np.nan,
-            channel:int=None
-            ):
+            channel:int=None):
         """Add an imaging dataset from single (ZxTxHxW) big-TIFF file.
         
         Args:
@@ -317,7 +334,7 @@ class CLI(object):
             channel (optional): for 5D tiff (TxCxZxWxH), use this channel
         """
         try:
-            assert len(tiff.shape)==4
+            assert len(array.shape)==4
         except AssertionError as e:
             print("4D array only of T x Z x H x W")
             raise(e)
@@ -328,7 +345,7 @@ class CLI(object):
                 ochannel_desc, emission)
         self.add_series(name, frame_rate,
             excitation_lambda=excitation, indicator=indicator,
-            imaging_plane_description=plane_description, dtype=tiff_dtype,
+            imaging_plane_description=plane_description, dtype=array.dtype,
             device=Device(device), optical_channel=optical_channel,
             T=T, Z=Z, H=H, W=W, two_p=two_p,
             grid_spacing=[z_um, y_um, x_um],
@@ -336,11 +353,11 @@ class CLI(object):
             )
         
         with tables.open_file(self.filepath, "a") as h5:
-            h5.root[f"/acquisition/{name}/data"] = array
+            data = h5.root[f"/acquisition/{name}/data"]
+            data[:] = array
 
         return self
 
-    
     def add_series(self, name: str, imaging_rate: float,
               two_p: bool, grid_spacing,
               T:int, Z:int, H:int, W:int, dtype, excitation_lambda=920.,
@@ -391,4 +408,4 @@ class CLI(object):
 
 
 if __name__ == '__main__':
-    fire.Fire(CLI)
+    fire.Fire(NWB)

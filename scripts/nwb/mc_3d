@@ -5,6 +5,10 @@ This script follows closely the demo_pipeline_nwb.py script but for a 3d
 dataset and only through the motion correction process.
 """
 
+import logging
+logging.basicConfig()
+logging.getLogger().setLevel(logging.DEBUG)
+
 import cv2
 import glob
 import logging
@@ -37,7 +41,6 @@ from caiman.source_extraction.cnmf import params as params
 from caiman.utils.utils import download_demo
 from caiman.paths import caiman_datadir
 import hdf5plugin
-
 # %%
 # Set up the logger (optional); change this if you like.
 # You can log to a file using the filename parameter, or make the output more
@@ -57,7 +60,9 @@ fnames = ["/data/noah_xlfm/2020-02-26/2020-02-26_xlfm.nwb"]
 
 with NWBHDF5IO(fnames[0], 'r') as io:
     nwbfile = io.read()
-    fr = nwbfile.acquisition["imaging"].rate
+    imaging = nwbfile.acquisition["imaging"]
+    fr = imaging.rate
+    min_mov = imaging.data[0:30].min() # must pass over CaImAn loads everything
 
 dset_name = 'acquisition/imaging'
 
@@ -102,8 +107,10 @@ mc_dict = {
     'border_nan': 'copy',
     'var_name_hdf5': dset_name,
     'is3D': is3D,
-    'splits_els': 12,
-    'splits_rig': 12
+    'splits_els': 20,
+    'splits_rig': 20,
+    'num_frames_split': 30,
+    'min_mov': min_mov
 }
 
 opts = params.CNMFParams(params_dict=mc_dict) #NOTE: default adjustments of parameters are not set yet, manually setting them now
@@ -127,12 +134,17 @@ if display_images:
 
 # %%% MOTION CORRECTION
 # first we create a motion correction object with the specified parameters
-mc = MotionCorrect(fnames, dview=None, var_name_hdf5=opts.data['var_name_hdf5'], **opts.get_group('motion'))
+print("setup mc")
+mc = MotionCorrect(fnames,
+                   dview=None, var_name_hdf5=opts.data['var_name_hdf5'],
+                   **opts.get_group('motion'))
 #    mc = MotionCorrect(fnames, dview=dview, var_name_hdf5=opts.data['var_name_hdf5'], **opts.get_group('motion'))
 # note that the file is not loaded in memory
 
 # %% Run (piecewise-rigid motion) correction using NoRMCorre
-mc.motion_correct(save_movie=False)
+print("run mc")
+mc.motion_correct(save_movie=True)
+print("finished mc")
 
 # %% compare with original movie
 if display_images:

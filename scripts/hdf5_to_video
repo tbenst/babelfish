@@ -78,7 +78,7 @@ def hdf5_to_video(hdf5_file: str, dataset: str, quality: str, codec, pix_format,
     # x265 at 110.8 it/s
     with tables.open_file(hdf5_file, 'r', swmr=True) as h5:
         imaging = h5.root[dataset]
-        if max_z or z_plane:
+        if max_z or type(z_plane) is int:
             assert len(imaging.shape)==5
         else:
             is_one_plane = imaging.shape[2]==1
@@ -145,7 +145,7 @@ def hdf5_to_video(hdf5_file: str, dataset: str, quality: str, codec, pix_format,
             else:
                 array_frame = uint16_to_rgb(array_frame, vmin, vmax)
                 # np_pix_format = "gray8"
-            plt.imshow(array_frame)
+            # plt.imshow(array_frame)
             # plt.savefig("test.png")
             # break
             frame = av.VideoFrame.from_ndarray(array_frame, format="rgb24")
