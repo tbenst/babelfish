@@ -8,8 +8,11 @@ pandas
 tifffile
 opencv-python
 dill
-pytorch
+torch
+click
 pytorch-lightning
 joblib
 scikit-video
 seaborn
+torchvision
+mlflow

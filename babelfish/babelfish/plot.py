@@ -195,3 +195,11 @@ cdict = {'red':   [[0.0,  0.0, 0.0],
          'blue':  [[0.0,  0.0, 0.0],
                    [1.0,  0.0, 0.0]]}
 cmap_gfp = LinearSegmentedColormap('gfp', segmentdata=cdict, N=256)
+
+cdict = {'red':   [[0.0,  0.0, 0.0],
+                   [1.0,  1.0, 1.0]],
+         'green': [[0.0,  0.0, 0.0],
+                   [1.0,  0.0, 0.0]],
+         'blue':  [[0.0,  0.0, 0.0],
+                   [1.0,  0.0, 0.0]]}
+cmap_rfp = LinearSegmentedColormap('rfp', segmentdata=cdict, N=256)
