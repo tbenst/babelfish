@@ -16,3 +16,4 @@ scikit-video
 seaborn
 torchvision
 mlflow
+tables
