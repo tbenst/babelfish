@@ -347,6 +347,9 @@ def resize_from_tiff(tiff):
 
 def read_tiff_path(tiff_path):
     tiff = tifffile.TiffFile(tiff_path)
+    if not len(tiff.series)==1:
+        print(tiff_path)
+        print(f"tiff series len: {len(tiff.series)}")
     assert len(tiff.series)==1 # we assume tiff.series[0] gets all data elsewhere
     return tiff
 
