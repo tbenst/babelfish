@@ -32,7 +32,7 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 @click.option("-n", "--name", default="raw", help="dataset name")
 @click.option("-c", "--compression-level", default=3, help="compression for zstd")
 @click.option("-u", "--um-per-pixel", type=float)
-def tiff_time_2_tyh5(tiff_folder: List, output_path: str, small: bool, name: str,
+def tiff_bruker_tyh5(tiff_folder: List, output_path: str, small: bool, name: str,
         channel_labels: str, frame_rate: float, um_per_pixel: float, compression_level: int):
     """Convert TIFF_PATHS to .ty.h5 imaging (TxCxZxHxW)
     
@@ -40,7 +40,7 @@ def tiff_time_2_tyh5(tiff_folder: List, output_path: str, small: bool, name: str
     
     Each tiff will become a separate time point.
     
-    Example: nix-shell --pure ~/code/babelfish/shell.nix --run "tiff_time_2_tyh5 -o $name.ty.h5 *.tif"
+    Example: nix-shell --pure ~/code/babelfish/shell.nix --run "tiff_bruker_tyh5 -o $name.ty.h5 *.tif"
     """
     if len(tiff_folder)!=1:
         # print help and exit
@@ -49,10 +49,26 @@ def tiff_time_2_tyh5(tiff_folder: List, output_path: str, small: bool, name: str
         exit(0)
     tiff_folder = tiff_folder[0]
     red_tiff_paths = sorted(filter(lambda x: "Ch2" in x, glob(tiff_folder+"/*.tif")))
+    # assume we must have green
     green_tiff_paths = sorted(filter(lambda x: "Ch3" in x, glob(tiff_folder+"/*.tif")))
-    T = min(len(green_tiff_paths), len(red_tiff_paths))
-    red_tiff_paths = red_tiff_paths[:T]
-    green_tiff_paths = green_tiff_paths[:T]
+    if len(red_tiff_paths) > 0:
+        has_red = True
+    else:
+        has_red = False
+    if len(green_tiff_paths) > 0:
+        has_green = True
+    else:
+        has_green = False
+        
+    if has_green and has_red:
+        T = min(len(green_tiff_paths), len(red_tiff_paths))
+    else:
+        T = max(len(green_tiff_paths), len(red_tiff_paths))
+    if has_red:
+        red_tiff_paths = red_tiff_paths[:T]
+    if has_green:
+        green_tiff_paths = green_tiff_paths[:T]
+        
     if output_path is None:
         experiment_dir, _ = os.path.splitext(tiff_folder[0])
         experiment_dir, _ = os.path.splitext(experiment_dir) # handle two extensions
@@ -72,7 +88,8 @@ def tiff_time_2_tyh5(tiff_folder: List, output_path: str, small: bool, name: str
         if not "version" in tyh5.root._v_attrs:
             tyh5.root._v_attrs["version"] = "0.1.0"
         dset_filter = tables.filters.Filters(complevel=compression_level, complib='blosc:zstd')
-        assert T > 0
+        if  T <= 0:
+            print(f"warn: T={T}")
 
         tiff = plt.imread(green_tiff_paths[0])
         tiff_shape = tiff.shape
@@ -81,7 +98,12 @@ def tiff_time_2_tyh5(tiff_folder: List, output_path: str, small: bool, name: str
         if len(tiff_shape)==2:
             H, W = tiff_shape
             Z = 1
-            C = 2
+            if has_red and has_green:
+                C = 2
+            elif has_red or has_green:
+                C = 1
+            else:
+                raise(NotImplementedError("must have green channel."))
         else:
             raise(NotImplementedError(f"bad tiff ndims of {len(tiff_shape)}"))
 
@@ -112,21 +134,25 @@ def tiff_time_2_tyh5(tiff_folder: List, output_path: str, small: bool, name: str
                 if small:
                     dset_small.attrs[f"channel_{i}"] =  label
 
-        for i, tp in tqdm(enumerate(zip(
-                green_tiff_paths, red_tiff_paths)),
-                total=len(green_tiff_paths)):
-            gp, rp = tp
-            green_tiff = plt.imread(gp)
-            red_tiff = plt.imread(rp)
-            dset_raw[i,0] = red_tiff
-            dset_raw[i,1] = green_tiff
+        # for i, tp in tqdm(enumerate(zip(
+        #         green_tiff_paths, red_tiff_paths)),
+        #         total=len(green_tiff_paths)):
+        for i in tqdm(range(len(green_tiff_paths))):
+            if has_green:
+                green_tiff = plt.imread(green_tiff_paths[i])
+            if has_red:
+                red_tiff = plt.imread(red_tiff_paths[i])
+                dset_raw[i,0] = red_tiff
+                dset_raw[i,1] = green_tiff
+            else:
+                dset_raw[i,0] = green_tiff
             if small:
                 raise(NotImplementedError("TODO"))
                 stack = resize_from_tiff(tiff)
                 assign_stack_to_dset(dset_small, stack, channel=i)
 
 if __name__ == '__main__':
-    tiff_time_2_tyh5()
+    tiff_bruker_tyh5()
 
 
 # %%

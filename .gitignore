@@ -111,3 +111,4 @@ nix/secrets.nix
 result
 cromwell-executions
 cromwell-workflow-logs
+notebooks/lightning_logs

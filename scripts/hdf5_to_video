@@ -39,7 +39,8 @@ def uint16_to_rgb(array, dset_min, dset_max):
 @click.argument("output_path", type=click.Path(exists=False), required=False)
 @click.option("-r", "--frame-rate", default=60, type=float, help="Hz")
 @click.option('-f', '--pix-format', default='yuv420p', help="pixel format")
-@click.option('-l', '--codec', default='h264_nvenc')
+# @click.option('-l', '--codec', default='h264_nvenc')
+@click.option('-l', '--codec', default='h264')
 @click.option('-g', '--gpu', default="1", help="GPU ID to use")
 @click.option('-c', '--channel', type=int, default=0)
 @click.option('-m', '--max-z/--no-max-z', default='False', help="max-Z projection")
@@ -79,14 +80,15 @@ def hdf5_to_video(hdf5_file: str, dataset: str, quality: str, codec, pix_format,
     with tables.open_file(hdf5_file, 'r', swmr=True) as h5:
         imaging = h5.root[dataset]
         if max_z or type(z_plane) is int:
-            assert len(imaging.shape)==5
+            assert len(imaging.shape)==5, f"got shape of {imaging.shape}"
         else:
             is_one_plane = imaging.shape[2]==1
             if is_one_plane:
                 z_plane = 0
             else:
                 assert len(imaging.shape)==4
-        assert imaging.shape[1]==1 # empty channel dim
+        # assert imaging.shape[1]==1 # empty channel dim
+        print(f"imaging shape: {imaging.shape}")
         H, W = np.array(imaging.shape)[[-2,-1]]
         
         output = av.open(output_path, 'w')
@@ -96,6 +98,8 @@ def hdf5_to_video(hdf5_file: str, dataset: str, quality: str, codec, pix_format,
         stream.pix_fmt = pix_format
         # cq for nvenc
         stream.options = {'crf': quality, 'gpu': gpu, "cq": quality}
+        stream.height = H
+        stream.width = H
         
         if max_z:
             temp_array = imaging[0:500,channel].max(1)
