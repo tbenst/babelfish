@@ -52,6 +52,6 @@
     "python.linting.pylintEnabled": true,
     "python.linting.mypyEnabled": false,
     "python.linting.enabled": true,
-    "jupyter.jupyterServerType": "local",
+    "jupyter.jupyterServerType": "remote",
     "python.pythonPath": "/home/tyler/opt/anaconda3/envs/bf/bin/python"
 }
