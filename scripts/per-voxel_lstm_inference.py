@@ -37,13 +37,15 @@ import babelfish as bf
 import babelfish_models.models as bfm
 import babelfish_models.models.pixel_lstm
 
-
 # tif_dir = None # TODO get from args
+tif_root = "/scratch/b115"
 # tif_dir = "/scratch/b115/2021-06-29_hsChRmine_6f_6dpf/fish2/TSeries-round3-lrhab-118trial-068"
-tif_dir = "/data/dlab/b115/2021-07-14_rsChRmine_h2b6s_5dpf/fish1/TSeries-lrhab-118trial-061"
+tif_dir = f"{tif_root}/2021-07-14_rsChRmine_h2b6s_5dpf/fish1/TSeries-lrhab-118trial-061"
+# tif_dir = f"{tif_root}/2021-07-14_rsChRmine_h2b6s_5dpf/fish1/TSeries-titration-192trial-062"
 # CKPT_PATH = None  # TODO: read from args
 # CKPT_PATH = "/scratch/models/2021-07-10T11:16:38.342868-LSTM_per-voxel-state_divide8192_final.ckpt"
-CKPT_PATH = "/scratch/models/2021-07-18T00:13:19.520229-LSTM_per-voxel-state_divide2048_final.ckpt"
+# CKPT_PATH = "/scratch/models/2021-07-18T00:13:19.520229-LSTM_per-voxel-state_divide2048_final.ckpt"
+CKPT_PATH = "/scratch/models/2021-07-18T14:40:32.653550-LSTM_per-voxel-state_divide2048_final.ckpt"
 
 model_base_dir = "/scratch/models/"  # TODO: args
 gpus = [0]  # TODO args
@@ -68,10 +70,10 @@ glia.pmap(bf.helpers.read_reshape_and_copy, enumerate(green_tiff_paths),
           initializer=glia.init_worker,
           initargs=(green_raw, green_shape, np.uint16), length=T*Z,
           progress=True)
-# green = np.frombuffer(green_raw, dtype=np.uint16).reshape(Z,T,H,W)
-green = np.frombuffer(green_raw, dtype=np.uint16).reshape(T, Z, H, W)
-# green = np.swapaxes(green, 0,1)
-green.shape
+green = np.ctypeslib.as_array(green_raw).reshape(T, Z, H, W)
+# green = np.frombuffer(green_raw, dtype=np.uint16).reshape(T, Z, H, W)
+
+##
 ##
 best_model = bfm.pixel_lstm.PerVoxel.load_from_checkpoint(CKPT_PATH)
 best_model = best_model.cuda()
@@ -108,6 +110,7 @@ tyh5_path = tif_dir + ".ty.h5"
 # tyh5_path = "/scratch/b115/2021-06-08_rsChRmine_h2b6s/fish2/TSeries-lrhab-titration-1232021-06-21_6pm.ty.h5"
 # TODO: read arg
 out_dataset = f"/imaging/{MODEL_NAME}-2021-07-02"
+##
 # TODO: aren't we missing the first ~24 indices...? => left as 0 I think?
 # would it be better to copy original data or ...?
 with tables.open_file(tyh5_path, 'a') as tyh5:
@@ -123,7 +126,6 @@ with tables.open_file(tyh5_path, 'a') as tyh5:
     else:
         h5_group = tyh5.root[group]
 
-    # dtype = np.dtype("uint16")
     dtype = np.dtype("float32")
     dset = tyh5.create_carray(group, dset_name,
                               tables.Atom.from_dtype(dtype), shape=green[:, None].shape,
@@ -132,6 +134,11 @@ with tables.open_file(tyh5_path, 'a') as tyh5:
     with torch.no_grad():
         for b, batch_data in tqdm(enumerate(dataloader), total=len(dataloader)):
             x, y = batch_data
+            to_pad = batch_size - y.shape[0]
+            if to_pad != 0:
+                # need to pad. Not yet tested....
+                y = F.pad(y, (0, 0, 0, 0, 0, 0, 0, 0, 0, to_pad))
+                x = F.pad(x, (0, 0, 0, 0, 0, 0, 0, 0, 0, to_pad, 0, 0))
             x = x.cuda()
             clean = best_model(x)
             # clean = tensor_to_uint16(clean)
@@ -143,6 +150,5 @@ with tables.open_file(tyh5_path, 'a') as tyh5:
             # 1:t, and prediction for t+1 is used as `denoised t`.
             # s -= 1
             dset[s:s+inference_batch_size] = clean
-
 
 ##
