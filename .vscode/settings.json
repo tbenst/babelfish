@@ -49,9 +49,9 @@
         "[!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.]": "python",
         "[!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.][!.]": "python"
     },
-    "python.pythonPath": "/home/tyler/opt/anaconda3/envs/bf/bin/python",
     "python.linting.pylintEnabled": true,
     "python.linting.mypyEnabled": false,
     "python.linting.enabled": true,
-    "jupyter.jupyterServerType": "remote"
+    "jupyter.jupyterServerType": "remote",
+    "python.pythonPath": "/home/tyler/opt/anaconda3/envs/bf/bin/python"
 }

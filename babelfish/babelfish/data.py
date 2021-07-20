@@ -1,7 +1,9 @@
 from __future__ import print_function, division
 import numpy as np
 import torch as T
+import torch
 from torch.utils.data import DataLoader, Dataset
+from typing import List
 
 # updated 2019/12/15
 class ZebraFishData(Dataset):
@@ -142,3 +144,59 @@ class ZebraFishDataCaiman(Dataset):
         X = {k: T.stack(v,0) for k,v in X.items()}
         Y = {k: T.stack(v,0) for k,v in Y.items()}
         return X, Y
+
+
+def rnn_collate_fn(tensors):
+    "Use for LSTM where need to have tuple."
+    # print(f"{len(tensors)}")
+    # print(f"{len(tensors[0])}")
+    # print(f"{len(tensors[0][0])}")
+    # seq x batch x feature (... x feature)
+    Xs = torch.stack([torch.from_numpy(t[0]) for t in tensors], dim=1)
+    # batch x feature (... x feature)
+    Ys = torch.stack([torch.from_numpy(t[1]) for t in tensors], dim=0)
+    return (Xs, Ys)
+
+
+def make_index_map(n, exclude_idxs):
+    "Create a map of length n - exclude_idxs."
+    new_idx = 0
+    idx_map = {}
+    exclude_idxs = sorted(exclude_idxs)
+    for i in range(n):
+        if len(exclude_idxs) > 0 and i == exclude_idxs[0]:
+            exclude_idxs.pop(0)
+        else:
+            idx_map[new_idx] = i
+            new_idx += 1
+    return idx_map
+
+
+assert make_index_map(5, [2, 3]) == {0: 0, 1: 1, 2: 4}
+
+class VolumeSeq(Dataset):
+    # volumes:np.ndarray # T x C x Z x H x W
+
+    def __init__(self, volumes: np.ndarray, exclude_frames_from_y: List,
+                 n_time_steps: int = 10, divide_by=512):
+        self.n_time_steps = n_time_steps
+        self.volumes = volumes
+        self.divide_by = divide_by
+
+        n_exclude = len(exclude_frames_from_y)
+        self.length = self.volumes.shape[0] - self.n_time_steps - n_exclude
+        self.idx_map = make_index_map(self.length, exclude_frames_from_y)
+
+    def __len__(self):
+        return self.length
+
+    def __getitem__(self, i):
+        last_idx = i+self.n_time_steps
+        # we add batch singleton dimension
+        x = self.volumes[i:last_idx].astype(np.float32)
+        y = self.volumes[last_idx].astype(np.float32)
+        # x /= 8192
+        # y /= 8192
+        x /= self.divide_by
+        y /= self.divide_by
+        return (x, y)

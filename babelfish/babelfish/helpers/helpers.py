@@ -1,6 +1,6 @@
 from __future__ import print_function, division
 import torch as T
-import torch, pathlib
+import torch, pathlib, glia
 import torch.nn.functional as F
 import torch.nn as nn
 from torchvision.utils import save_image
@@ -445,3 +445,15 @@ def caiman_load_memmap(filename: str, mode: str = 'r') -> Tuple[Any, Tuple, int]
         
     return np.reshape(Yr.T, [T] + list(dims), order='F')
     # return np.array(np.reshape(Yr.T, [T] + list(dims), order='F'))
+    
+
+def read_and_copy(index_path_tuple, k=lambda x: x):
+    index, path = index_path_tuple
+    glia.config.worker_args[0][index] = k(plt.imread(path))
+
+
+def read_reshape_and_copy(index_path_tuple, k=lambda x: x):
+    index, path = index_path_tuple
+    X = np.frombuffer(glia.config.worker_args[0],
+                      dtype=glia.config.worker_args[2]).reshape(glia.config.worker_args[1])
+    X[index] = k(plt.imread(path))
