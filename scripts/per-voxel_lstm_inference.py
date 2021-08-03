@@ -25,6 +25,7 @@ from julia.api import Julia
 from typing import Union, List
 jl = Julia(compiled_modules=False)
 import pyarrow as pa
+import neptune.new as neptune
 
 # this is fragile and depends on PyCall being installed in root env
 from julia import Pkg
@@ -36,16 +37,28 @@ L = Lensman
 import babelfish as bf
 import babelfish_models.models as bfm
 import babelfish_models.models.pixel_lstm
+##
+project = neptune.get_project(name='tbenst/3region-stim')
+# Fetch all Runs metadata as Pandas DataFrame
+runs_table_df = project.fetch_runs_table().to_pandas()
+##
 
 # tif_dir = None # TODO get from args
 tif_root = "/scratch/b115"
 # tif_dir = "/scratch/b115/2021-06-29_hsChRmine_6f_6dpf/fish2/TSeries-round3-lrhab-118trial-068"
-tif_dir = f"{tif_root}/2021-07-14_rsChRmine_h2b6s_5dpf/fish1/TSeries-lrhab-118trial-061"
+# tif_dir = f"{tif_root}/2021-07-14_rsChRmine_h2b6s_5dpf/fish1/TSeries-lrhab-118trial-061"
 # tif_dir = f"{tif_root}/2021-07-14_rsChRmine_h2b6s_5dpf/fish1/TSeries-titration-192trial-062"
-# CKPT_PATH = None  # TODO: read from args
-# CKPT_PATH = "/scratch/models/2021-07-10T11:16:38.342868-LSTM_per-voxel-state_divide8192_final.ckpt"
-# CKPT_PATH = "/scratch/models/2021-07-18T00:13:19.520229-LSTM_per-voxel-state_divide2048_final.ckpt"
-CKPT_PATH = "/scratch/models/2021-07-18T14:40:32.653550-LSTM_per-voxel-state_divide2048_final.ckpt"
+# tif_dir = f"{tif_root}/2021-07-14_rsChRmine_h2b6s_5dpf/fish2/TSeries-lrhab-118trial-069"
+# tif_dir = f"{tif_root}/2021-07-14_rsChRmine_h2b6s_5dpf/fish2/TSeries-titration-192trial-070"
+tif_dir = f"{tif_root}/2021-07-14_rsChRmine_h2b6s_5dpf/fish2/TSeries-cstoner-n64-b2-r8-077"
+
+# we lookup checkpoint path from neptune run
+trained_models = runs_table_df[runs_table_df['properties/param__data_dir'] == tif_dir]
+ckpt_paths = trained_models["parameters/save_dir"]
+if len(ckpt_paths) != 1:
+    print(f"Found {len(ckpt_paths)} checkpoints for {tif_dir}")
+
+CKPT_PATH = ckpt_paths.values[0] + "_final.ckpt"
 
 model_base_dir = "/scratch/models/"  # TODO: args
 gpus = [0]  # TODO args
@@ -70,10 +83,9 @@ glia.pmap(bf.helpers.read_reshape_and_copy, enumerate(green_tiff_paths),
           initializer=glia.init_worker,
           initargs=(green_raw, green_shape, np.uint16), length=T*Z,
           progress=True)
-green = np.ctypeslib.as_array(green_raw).reshape(T, Z, H, W)
-# green = np.frombuffer(green_raw, dtype=np.uint16).reshape(T, Z, H, W)
+# green = np.ctypeslib.as_array(green_raw).reshape(T, Z, H, W)
+green = np.frombuffer(green_raw, dtype=np.uint16).reshape(T, Z, H, W)
 
-##
 ##
 best_model = bfm.pixel_lstm.PerVoxel.load_from_checkpoint(CKPT_PATH)
 best_model = best_model.cuda()
@@ -82,9 +94,10 @@ model = best_model
 full_dataset = bf.data.VolumeSeq(green[:, None], [],
                                 n_time_steps=n_time_steps,
                                 divide_by=DIVIDE_BY)
+# del green
 ##
 with torch.no_grad():
-    x, y = full_dataset[100-n_time_steps]
+    x, y = full_dataset[1000-n_time_steps]
     x = torch.from_numpy(x[:, None]).repeat(1, 4, 1, 1, 1, 1)
     x = x.cuda()
     clean = best_model(x)
@@ -94,12 +107,12 @@ fig, axes = plt.subplots(1, 2, figsize=(10, 5))
 im0 = axes[0].imshow(y[0, 5])
 im = axes[1].imshow(clean[0, 5])
 # fig.colorbar(im0)
-fig.colorbar(im)
+# fig.colorbar(im)
 ##
 inference_batch_size = 4  # even 8 OOM...?
 dataloader = torch.utils.data.DataLoader(
     full_dataset, batch_size=inference_batch_size, collate_fn=bf.data.rnn_collate_fn, shuffle=False,
-    num_workers=0, pin_memory=True)
+    num_workers=0)
 
 tyh5_path = tif_dir + ".ty.h5"
 # tyh5_path = tif_dir + "2021-06-21_6pm.ty.h5"
@@ -128,7 +141,8 @@ with tables.open_file(tyh5_path, 'a') as tyh5:
 
     dtype = np.dtype("float32")
     dset = tyh5.create_carray(group, dset_name,
-                              tables.Atom.from_dtype(dtype), shape=green[:, None].shape,
+                              tables.Atom.from_dtype(dtype),
+                              shape=(T, 1, Z, H, W),
                               )
     #   filters=dset_filter)
     with torch.no_grad():
@@ -151,4 +165,41 @@ with tables.open_file(tyh5_path, 'a') as tyh5:
             # s -= 1
             dset[s:s+inference_batch_size] = clean
 
+##
+# temp delete me
+
+x, y = full_dataset[2000-n_time_steps]
+
+fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+im0 = axes[0].imshow(y[0, 5])
+# fig.colorbar(im0)
+# fig.colorbar(im)
+
+##
+voltageFiles = L.glob("*VoltageRecording*.csv", tif_dir)
+if len(voltageFiles) == 1:
+    stim_start_idx, stim_end_idx, frame_start_idx = L.getStimTimesFromVoltages(
+        voltageFiles[0], Z)
+else:
+    stim_start_idx, stim_end_idx, frame_start_idx = L.getStimTimesFromVoltages(
+        voltageFiles, Z)
+
+##
+stim_start_idx[0]
+##
+_, x0 = full_dataset[40]
+_, x1 = full_dataset[41]
+_, x2 = full_dataset[42]
+_, x3 = full_dataset[43]
+
+fig, axes = plt.subplots(1, 4, figsize=(10, 5))
+im0 = axes[0].imshow(x0[0, 5])
+im0 = axes[1].imshow(x1[0, 5])
+im0 = axes[2].imshow(x2[0, 5])
+im0 = axes[3].imshow(x3[0, 5])
+
+##
+green.shape
+##
+plt.imshow(green[41, 5])
 ##

@@ -39,10 +39,14 @@ import babelfish as bf
 import babelfish_models.models as bfm
 import babelfish_models.models.pixel_lstm
 
+tif_root = "/scratch/b115"
 # tif_dir = None # TODO get from args
 # tif_dir = "/scratch/b115/2021-06-29_hsChRmine_6f_6dpf/fish2/TSeries-round3-lrhab-118trial-068"
-tif_dir = "/data/dlab/b115/2021-07-14_rsChRmine_h2b6s_5dpf/fish1/TSeries-lrhab-118trial-061"
-tif_dir = "/data/dlab/b115/2021-07-14_rsChRmine_h2b6s_5dpf/fish1/TSeries-titration-192trial-062"
+# tif_dir = "/data/dlab/b115/2021-07-14_rsChRmine_h2b6s_5dpf/fish1/TSeries-lrhab-118trial-061"
+# tif_dir = "/data/dlab/b115/2021-07-14_rsChRmine_h2b6s_5dpf/fish1/TSeries-titration-192trial-062"
+# tif_dir = f"{tif_root}/2021-07-14_rsChRmine_h2b6s_5dpf/fish2/TSeries-lrhab-118trial-069"
+# tif_dir = f"{tif_root}/2021-07-14_rsChRmine_h2b6s_5dpf/fish2/TSeries-titration-192trial-070"
+tif_dir = f"{tif_root}/2021-07-14_rsChRmine_h2b6s_5dpf/fish2/TSeries-cstoner-n64-b2-r8-077"
 
 model_base_dir = "/scratch/models/" # TODO: args
 gpus = [0] # TODO args
@@ -51,8 +55,8 @@ batch_size = 4
 n_time_steps = 24
 max_epochs = 1
 # DIVIDE_BY = 512 # good for dim experiments
-# DIVIDE_BY = 8192 # good for bright
-DIVIDE_BY = 2048 # good compromise..?
+DIVIDE_BY = 8192 # good for bright
+# DIVIDE_BY = 2048 # good compromise..?
 
 MODEL_NAME = f"LSTM_per-voxel-state_divide{DIVIDE_BY}"
 
@@ -134,7 +138,7 @@ model = bfm.pixel_lstm.PerVoxel(
 neptune_logger = NeptuneLogger(
     api_key=os.environ["NEPTUNE_API_TOKEN"],
     project_name="tbenst/3region-stim",
-    params=model.hparams,
+    params=Dict(**{"divide_by": DIVIDE_BY}, **model.hparams),
     experiment_name=MODEL_NAME,  # Optional,
     # tags=["optuna-trial"] + tags
 )
