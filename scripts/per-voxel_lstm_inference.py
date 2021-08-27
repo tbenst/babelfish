@@ -50,7 +50,8 @@ tif_root = "/scratch/b115"
 # tif_dir = f"{tif_root}/2021-07-14_rsChRmine_h2b6s_5dpf/fish1/TSeries-titration-192trial-062"
 # tif_dir = f"{tif_root}/2021-07-14_rsChRmine_h2b6s_5dpf/fish2/TSeries-lrhab-118trial-069"
 # tif_dir = f"{tif_root}/2021-07-14_rsChRmine_h2b6s_5dpf/fish2/TSeries-titration-192trial-070"
-tif_dir = f"{tif_root}/2021-07-14_rsChRmine_h2b6s_5dpf/fish2/TSeries-cstoner-n64-b2-r8-077"
+# tif_dir = f"{tif_root}/2021-07-14_rsChRmine_h2b6s_5dpf/fish2/TSeries-cstoner-n64-b2-r8-077"
+tif_dir = f"{tif_root}/2021-06-08_rsChRmine_h2b6s/fish2/TSeries-lrhab-118trial-122"
 
 # we lookup checkpoint path from neptune run
 trained_models = runs_table_df[runs_table_df['properties/param__data_dir'] == tif_dir]
@@ -70,6 +71,7 @@ max_epochs = 1
 # DIVIDE_BY = 8192
 DIVIDE_BY = int(re.match(r".*divide(\d*)", CKPT_PATH)[1])
 MODEL_NAME = f"LSTM_per-voxel-state_divide{DIVIDE_BY}"
+CKPT_PATH, MODEL_NAME
 
 ##
 H, W, Z, T, framePlane2tiffPath = L.tseriesTiffDirMetadata(tif_dir)
@@ -128,7 +130,7 @@ out_dataset = f"/imaging/{MODEL_NAME}-2021-07-02"
 # would it be better to copy original data or ...?
 with tables.open_file(tyh5_path, 'a') as tyh5:
     if out_dataset in tyh5:
-        # raise ValueError(f"dset ({out_dataset}) already exists")
+        raise ValueError(f"dset ({out_dataset}) already exists")
         print(f"dset ({out_dataset}) already exists. Removing...")
         tyh5.remove_node(out_dataset)
     dset_filter = tables.filters.Filters(complevel=0, complib='blosc:zstd')

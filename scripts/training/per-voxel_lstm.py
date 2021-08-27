@@ -46,7 +46,8 @@ tif_root = "/scratch/b115"
 # tif_dir = "/data/dlab/b115/2021-07-14_rsChRmine_h2b6s_5dpf/fish1/TSeries-titration-192trial-062"
 # tif_dir = f"{tif_root}/2021-07-14_rsChRmine_h2b6s_5dpf/fish2/TSeries-lrhab-118trial-069"
 # tif_dir = f"{tif_root}/2021-07-14_rsChRmine_h2b6s_5dpf/fish2/TSeries-titration-192trial-070"
-tif_dir = f"{tif_root}/2021-07-14_rsChRmine_h2b6s_5dpf/fish2/TSeries-cstoner-n64-b2-r8-077"
+# tif_dir = f"{tif_root}/2021-07-14_rsChRmine_h2b6s_5dpf/fish2/TSeries-cstoner-n64-b2-r8-077"
+tif_dir = f"{tif_root}/2021-06-08_rsChRmine_h2b6s/fish2/TSeries-lrhab-118trial-122"
 
 model_base_dir = "/scratch/models/" # TODO: args
 gpus = [0] # TODO args
@@ -59,7 +60,7 @@ DIVIDE_BY = 8192 # good for bright
 # DIVIDE_BY = 2048 # good compromise..?
 
 MODEL_NAME = f"LSTM_per-voxel-state_divide{DIVIDE_BY}"
-
+MODEL_NAME
 ##
 H, W, Z, T, framePlane2tiffPath = L.tseriesTiffDirMetadata(tif_dir)
 green_tiff_paths = sorted(filter(lambda x: "Ch3" in x, glob(tif_dir+"/*.tif")))
@@ -138,7 +139,7 @@ model = bfm.pixel_lstm.PerVoxel(
 neptune_logger = NeptuneLogger(
     api_key=os.environ["NEPTUNE_API_TOKEN"],
     project_name="tbenst/3region-stim",
-    params=Dict(**{"divide_by": DIVIDE_BY}, **model.hparams),
+    params=dict(**{"divide_by": DIVIDE_BY}, **model.hparams),
     experiment_name=MODEL_NAME,  # Optional,
     # tags=["optuna-trial"] + tags
 )
@@ -174,4 +175,6 @@ trainer.save_checkpoint(checkpoint_path)
 sys.stdout.write(checkpoint_path+"\n")
 checkpoint_path
 
+##
+exit()
 ##
